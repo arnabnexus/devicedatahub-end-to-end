@@ -102,6 +102,24 @@ services:
       - ./grafana/dashboard.json:/var/lib/grafana/dashboards/telemetry.json:ro
     restart: unless-stopped
 
+  monitor:
+    build: .
+    command: ["python", "-m", "ui.monitor"]
+    environment:
+      DB_HOST: timescaledb
+      DB_PORT: 5432
+      DB_NAME: telemetry
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "127.0.0.1:5000:5000"
+      - "127.0.0.1:6080:6000"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   timescaledb_data:
   grafana_data:

@@ -75,6 +75,16 @@ logForwarder:
   enabled: true
   image: fluent/fluent-bit:3.2.10
 
+monitor:
+  enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 96Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+
 training:
   enabled: true
   dataPath: data/train_1000.json

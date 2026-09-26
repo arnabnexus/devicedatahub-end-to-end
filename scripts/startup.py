@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import secrets
 import shutil
 import stat
 import subprocess
@@ -198,7 +197,7 @@ def splunk_values_file(*, accept_terms: bool = False) -> Path:
     values = {
         "splunk": {
             "acceptLicense": True,
-            "adminPassword": secrets.token_urlsafe(24),
+            "adminPassword": "admin123",
             "hecToken": str(uuid.uuid4()),
         }
     }
@@ -206,7 +205,7 @@ def splunk_values_file(*, accept_terms: bool = False) -> Path:
     with os.fdopen(descriptor, "w", encoding="utf-8") as credentials_file:
         json.dump(values, credentials_file, indent=2)
         credentials_file.write("\n")
-    print(f"Generated local Splunk credentials in {values_path} (permissions 600).", flush=True)
+    print(f"Saved local Splunk credentials in {values_path} (permissions 600).", flush=True)
     return values_path
 
 

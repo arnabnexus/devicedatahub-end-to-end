@@ -136,6 +136,24 @@ class TelemetryRepository:
                         cur.execute(
                             "SELECT create_hypertable('public.telemetry', 'timestamp', if_not_exists => TRUE);"
                         )
+                        cur.execute(
+                            """
+                            CREATE TABLE IF NOT EXISTS public.mqtt_messages (
+                                id BIGSERIAL PRIMARY KEY,
+                                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                                direction TEXT NOT NULL CHECK (direction IN ('incoming', 'published')),
+                                topic TEXT NOT NULL,
+                                payload TEXT NOT NULL,
+                                succeeded BOOLEAN NOT NULL DEFAULT TRUE
+                            )
+                            """
+                        )
+                        cur.execute(
+                            """
+                            CREATE INDEX IF NOT EXISTS mqtt_messages_created_at_idx
+                                ON public.mqtt_messages (created_at DESC, id DESC)
+                            """
+                        )
                 logger.info("Telemetry table ready in database '%s'", self.database)
                 return
             except Exception as exc:  # pragma: no cover - depends on DB startup timing
@@ -144,6 +162,23 @@ class TelemetryRepository:
                 time.sleep(2)
 
         raise RuntimeError(f"Could not initialize telemetry storage: {last_error}")
+
+    def record_mqtt_message(
+        self,
+        direction: str,
+        topic: str,
+        payload: str,
+        succeeded: bool = True,
+    ) -> None:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO public.mqtt_messages (direction, topic, payload, succeeded)
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    (direction, topic, payload, succeeded),
+                )
 
     def extract_wifi_rows(self, parsed: Any) -> list[dict[str, Any]]:
         if not isinstance(parsed, dict):

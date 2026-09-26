@@ -7,6 +7,8 @@ import time
 from typing import Dict, Any, Optional
 import paho.mqtt.client as mqtt
 
+from .db import record_mqtt_message
+
 logger = logging.getLogger(__name__)
 
 
@@ -134,6 +136,13 @@ class MQTTAlertPublisher:
     def _on_disconnect(self, client, userdata, rc):
         self.connected = False
 
+    @staticmethod
+    def _record_published(topic: str, payload: str, succeeded: bool) -> None:
+        try:
+            record_mqtt_message("published", topic, payload, succeeded)
+        except Exception:
+            logger.exception("Failed to record published MQTT message in TimescaleDB")
+
     def publish_anomaly_alert(
         self, device_id: str, anomaly_data: Dict[str, Any]
     ) -> bool:
@@ -147,7 +156,9 @@ class MQTTAlertPublisher:
 
         try:
             result = self.client.publish(topic, payload, qos=1, retain=False)
-            if result.rc == mqtt.MQTT_ERR_SUCCESS:
+            succeeded = result.rc == mqtt.MQTT_ERR_SUCCESS
+            self._record_published(topic, payload, succeeded)
+            if succeeded:
                 logger.info(f"📡 Published anomaly to {topic}")
                 return True
             logger.error(f"Failed to publish to {topic}: {result.rc}")
@@ -181,7 +192,9 @@ class MQTTAlertPublisher:
 
         try:
             result = self.client.publish(topic, payload, qos=1, retain=True)
-            return result.rc == mqtt.MQTT_ERR_SUCCESS
+            succeeded = result.rc == mqtt.MQTT_ERR_SUCCESS
+            self._record_published(topic, payload, succeeded)
+            return succeeded
         except Exception as e:
             logger.error(f"Error publishing status: {e}")
             self.connected = False
@@ -197,7 +210,9 @@ class MQTTAlertPublisher:
 
         try:
             result = self.client.publish(topic, payload, qos=1, retain=True)
-            return result.rc == mqtt.MQTT_ERR_SUCCESS
+            succeeded = result.rc == mqtt.MQTT_ERR_SUCCESS
+            self._record_published(topic, payload, succeeded)
+            return succeeded
         except Exception as e:
             logger.error(f"Error publishing summary: {e}")
             self.connected = False

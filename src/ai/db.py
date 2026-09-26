@@ -30,6 +30,30 @@ def _table_name() -> str:
     return os.getenv("DB_TABLE", os.getenv("TS_TABLE", "telemetry"))
 
 
+def record_mqtt_message(direction: str, topic: str, payload: str, succeeded: bool = True) -> None:
+  with get_conn() as conn:
+    with conn.cursor() as cur:
+      cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS public.mqtt_messages (
+          id BIGSERIAL PRIMARY KEY,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          direction TEXT NOT NULL CHECK (direction IN ('incoming', 'published')),
+          topic TEXT NOT NULL,
+          payload TEXT NOT NULL,
+          succeeded BOOLEAN NOT NULL DEFAULT TRUE
+        )
+        """
+      )
+      cur.execute(
+        """
+        INSERT INTO public.mqtt_messages (direction, topic, payload, succeeded)
+        VALUES (%s, %s, %s, %s)
+        """,
+        (direction, topic, payload, succeeded),
+      )
+
+
 def fetch_window_features(conn, interval_minutes=None):
     """
     Fetch the latest telemetry snapshot per (device_id, radio) for inference.

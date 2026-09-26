@@ -129,11 +129,12 @@ log "Waiting for Kubernetes Services"
 for attempt in $(seq 1 30); do
     if "$KUBECTL" get service ai-flow-grafana -n "$NAMESPACE" >/dev/null 2>&1 \
         && "$KUBECTL" get service ai-flow-timescaledb -n "$NAMESPACE" >/dev/null 2>&1 \
-        && "$KUBECTL" get service ai-flow-splunk -n "$NAMESPACE" >/dev/null 2>&1; then
+        && "$KUBECTL" get service ai-flow-splunk -n "$NAMESPACE" >/dev/null 2>&1 \
+        && "$KUBECTL" get service ai-flow-monitor -n "$NAMESPACE" >/dev/null 2>&1; then
         break
     fi
     if [[ "$attempt" == 30 ]]; then
-        fail "Grafana, TimescaleDB, or Splunk Service did not become available."
+        fail "Grafana, TimescaleDB, Splunk, or monitor Service did not become available."
     fi
     sleep 2
 done
@@ -172,7 +173,6 @@ start_background_forward() {
 }
 
 print_followup_commands() {
-    local splunk_password_command="python3 -c 'import json; print(json.load(open(\".runtime/splunk-values.json\"))[\"splunk\"][\"adminPassword\"])'"
     printf '\n[start-linux] Run these commands from another terminal:\n'
     printf '  cd %q\n' "$ROOT_DIR"
     printf '  export PATH=%q:"$PATH"\n' "$ROOT_DIR/.local/bin"
@@ -189,8 +189,12 @@ print_followup_commands() {
     printf '    Simulator logs (simulation mode): index=main "ai-flow-simulator"\n'
     printf '    Pod metadata filter: index=main kubernetes.namespace_name=devicedatahub kubernetes.pod_name="ai-flow-inference*"\n'
     printf '  Splunk username: admin\n'
-    printf '  Splunk password command: %s\n' "$splunk_password_command"
+    printf '  Splunk password: admin123\n'
     printf '  Splunk UI: http://localhost:4000\n'
+    printf '  MQTT message UI: http://localhost:5000\n'
+    printf '  TimescaleDB records UI: http://localhost:6080\n'
+    printf '    Time ranges: Last 5 minutes, 15 minutes, 1 hour, 24 hours, or All time\n'
+    printf '    Both pages auto-refresh every 30 seconds; use Load older records to paginate\n'
     printf '  python3 scripts/shutdown.py\n'
 }
 
@@ -199,11 +203,16 @@ if ! run_forward "DeviceDataHub Grafana" "grafana" "service/ai-flow-grafana" "30
     start_background_forward "grafana" "service/ai-flow-grafana" "3000:3000"
     start_background_forward "timescaledb" "service/ai-flow-timescaledb" "5433:5432"
     start_background_forward "splunk" "service/ai-flow-splunk" "4000:8000"
+    start_background_forward "mqtt-ui" "service/ai-flow-monitor" "5000:5000"
+    start_background_forward "telemetry-ui" "service/ai-flow-monitor" "6080:6000"
     log "Grafana: http://localhost:3000"
     log "Grafana log: $RUNTIME_DIR/grafana.port-forward.log"
     log "TimescaleDB: localhost:5433"
     log "TimescaleDB log: $RUNTIME_DIR/timescaledb.port-forward.log"
     log "Grafana URL: http://localhost:3000"
+    log "MQTT messages UI: http://localhost:5000"
+    log "TimescaleDB records UI: http://localhost:6080"
+    log "Monitor pages auto-refresh every 30 seconds; choose a time range and use Load older records."
     print_followup_commands
     exit 0
 fi
@@ -215,6 +224,15 @@ if ! run_forward "DeviceDataHub TimescaleDB" "timescaledb" "service/ai-flow-time
     if ! run_forward "DeviceDataHub Splunk" "splunk" "service/ai-flow-splunk" "4000:8000"; then
         start_background_forward "splunk" "service/ai-flow-splunk" "4000:8000"
     fi
+    if ! run_forward "DeviceDataHub MQTT Monitor" "mqtt-ui" "service/ai-flow-monitor" "5000:5000"; then
+        start_background_forward "mqtt-ui" "service/ai-flow-monitor" "5000:5000"
+    fi
+    if ! run_forward "DeviceDataHub Telemetry Monitor" "telemetry-ui" "service/ai-flow-monitor" "6080:6000"; then
+        start_background_forward "telemetry-ui" "service/ai-flow-monitor" "6080:6000"
+    fi
+    log "MQTT messages UI: http://localhost:5000"
+    log "TimescaleDB records UI: http://localhost:6080"
+    log "Monitor pages auto-refresh every 30 seconds; choose a time range and use Load older records."
     print_followup_commands
     exit 0
 fi
@@ -224,8 +242,17 @@ if ! run_forward "DeviceDataHub Splunk" "splunk" "service/ai-flow-splunk" "4000:
     start_background_forward "splunk" "service/ai-flow-splunk" "4000:8000"
 fi
 
+if ! run_forward "DeviceDataHub MQTT Monitor" "mqtt-ui" "service/ai-flow-monitor" "5000:5000"; then
+    start_background_forward "mqtt-ui" "service/ai-flow-monitor" "5000:5000"
+fi
+if ! run_forward "DeviceDataHub Telemetry Monitor" "telemetry-ui" "service/ai-flow-monitor" "6080:6000"; then
+    start_background_forward "telemetry-ui" "service/ai-flow-monitor" "6080:6000"
+fi
+
 log "Child terminals started"
 log "Grafana: http://localhost:3000"
 log "TimescaleDB: localhost:5433, database telemetry"
+log "MQTT messages UI: http://localhost:5000"
+log "TimescaleDB records UI: http://localhost:6080"
 log "Keep both child terminals open while using Grafana or the database."
 print_followup_commands

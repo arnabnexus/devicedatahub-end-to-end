@@ -11,7 +11,8 @@ run:
 ```
 
 The flow starts an MQTT consumer, TimescaleDB, Grafana, Splunk log search,
-model training, inference, and optional local MQTT simulation.
+live MQTT/telemetry monitor pages, model training, inference, and optional local
+MQTT simulation.
 
 ## 1. Hardware and Windows prerequisites
 
@@ -360,19 +361,19 @@ The launcher will:
 8. Build and load the application image.
 9. Deploy the Helm release.
 10. Train the model in the inference init container.
-11. Start Splunk Enterprise and a Fluent Bit DaemonSet that forwards logs from the `devicedatahub` namespace.
-12. Start the consumer, inference, TimescaleDB, and Grafana workloads.
-13. Start local port-forwards, including Splunk Web on port `4000`.
-14. Print Kubernetes log commands for inspecting or following workload logs.
+11. Start Splunk Enterprise and Fluent Bit for namespace pod logs.
+12. Start the MQTT/TimescaleDB monitor UI and application workloads.
+13. Start local port-forwards: Splunk `4000`, MQTT monitor `5000`, and telemetry monitor host port `6080` to container port `6000`.
+14. Print Kubernetes log commands and Splunk searches.
 
 On first startup, read the Splunk license and current General Terms at
 https://www.splunk.com/en_us/legal/splunk-general-terms.html. Normally the
 installer requires you to type `YES` to confirm acceptance. After reviewing and
 accepting the terms, automation can use
 `ACCEPT_SPLUNK_TERMS=true ./scripts/start_linux.sh` to skip the prompt; the
-default remains interactive. Startup generates a local admin password and HEC
-token in `.runtime/splunk-values.json`; keep this file private and retrieve the
-admin password from it for Splunk login.
+default remains interactive. Splunk login is username `admin`, password
+`admin123`. The HEC token is stored in `.runtime/splunk-values.json`; keep this
+file private.
 
 At the simulator prompt:
 
@@ -400,13 +401,29 @@ Password: postgres
 ```
 
 Splunk Web is available at `http://localhost:4000` with username `admin` and
-the generated password stored in `.runtime/splunk-values.json`.
+password `admin123`.
+This is a weak local-workshop password: keep the port-forward local and do not
+expose the service to an untrusted network. If Splunk was already initialized
+with an earlier password, sign in with that existing password and change it in
+Splunk Web; the persistent Splunk data volume can retain its previous password.
 
-Retrieve the password from the repository root with:
+The application monitor pages are:
 
-```bash
-python3 -c 'import json; print(json.load(open(".runtime/splunk-values.json"))["splunk"]["adminPassword"])'
+```text
+MQTT incoming and published messages: http://localhost:5000
+TimescaleDB telemetry records:         http://localhost:6080 (container port 6000)
 ```
+
+Both refresh every 30 seconds and provide Last 5 minutes, Last 15 minutes,
+Last 1 hour, Last 24 hours, and All time filters. Results are newest-first;
+select **Load older records** to page through more rows. MQTT messages are
+audited in `public.mqtt_messages`; the records page reads `public.telemetry`,
+the same table used by Grafana.
+
+The MQTT page shows direction, topic, delivery status, and payload for incoming
+telemetry and published anomaly/status events. The telemetry page shows recent
+device/radio measurements such as channel utilization, RSSI, client counts, and
+retry/failure counts.
 
 ## 13. Verify after startup
 

@@ -9,6 +9,8 @@ MQTT over ngrok -> consumer -> TimescaleDB -> Grafana
                                                         |
                                       inference.py -> MQTT alerts
 Kubernetes pod logs -> Fluent Bit -> Splunk HEC -> Splunk Web
+MQTT message audit -> TimescaleDB -> MQTT monitor :5000
+Telemetry records -> TimescaleDB -> Records monitor :6080 / Grafana
 ```
 
 ## Start On Linux
@@ -42,22 +44,48 @@ clone the repository yourself, then run the commands above from that checkout.
 11. Starts TimescaleDB, Grafana, Splunk, Fluent Bit, the MQTT consumer, and inference pods.
 12. Trains the model from `data/train_1000.json` in the inference pod init container.
 13. Starts `inference.py` only after training and database readiness succeed.
-14. Starts Grafana, TimescaleDB, and Splunk port-forward processes.
+14. Starts Grafana, TimescaleDB, Splunk, and monitor UI port-forwards.
 
 On first startup, review and explicitly accept the Splunk license and current
 General Terms when prompted. After reviewing and accepting them, you can skip
 the prompt in an automated run with
 `ACCEPT_SPLUNK_TERMS=true ./scripts/start_linux.sh`. This is an explicit opt-in;
-the default remains interactive. The script generates a random Splunk admin
-password and HEC token and stores them in `.runtime/splunk-values.json` with
-owner-only permissions. Keep this file private; it is ignored by Git and reused
-for later Helm upgrades.
+the default remains interactive. Splunk signs in with username `admin` and
+password `admin123`. The HEC token is generated and credentials are stored in
+`.runtime/splunk-values.json` with owner-only permissions. Keep this file
+private; it is ignored by Git and reused for later Helm upgrades.
 
 The launcher prints the Grafana and Splunk URLs, plus `kubectl logs` commands.
 Splunk Web is forwarded from local port `4000` to container port `8000`; sign in
-as `admin` and retrieve the generated password from `.runtime/splunk-values.json`.
+as `admin` with password `admin123`.
 The Splunk Enterprise image is resource intensive; a 16 GB RAM laptop and at
 least 30 GB free disk space are recommended.
+`admin123` is a weak workshop password; use it only for a local, trusted
+development environment and do not expose Splunk outside the laptop. If Splunk
+was already initialized with the previous generated password, changing the
+local values file does not necessarily change the password in its persistent
+data. Sign in with the existing password and change the account password in
+Splunk Web to `admin123`.
+
+The startup output also prints two application monitor URLs:
+
+- `http://localhost:5000` shows incoming MQTT messages and published anomaly/status messages, newest first.
+- `http://localhost:6080` shows telemetry rows stored in TimescaleDB, newest first; this is the same `public.telemetry` table Grafana reads. The container still listens on `6000`; startup forwards the browser to `6080` because Chromium blocks local port `6000`.
+
+Both pages auto-refresh every 30 seconds, support Last 5 minutes, Last 15
+minutes, Last 1 hour, Last 24 hours, and All time filters, and provide
+load-older pagination. MQTT message history is stored in
+`public.mqtt_messages`; telemetry is stored in `public.telemetry`.
+The MQTT page presents message direction, topic, status, and payload. The
+telemetry page presents device/radio readings including utilization, signal,
+client, retry, and failure fields.
+
+When running the optional Docker Compose stack, the same UI ports are published
+directly by the `monitor` service:
+
+```bash
+docker compose up --build
+```
 
 GitHub CLI is not required for this public HTTPS repository. Git can pull it
 without `gh auth login`.
@@ -136,18 +164,19 @@ kubectl port-forward service/ai-flow-timescaledb 5433:5432 \
   --namespace=devicedatahub
 ```
 
+Forward the monitor pages manually if needed:
+
+```bash
+kubectl port-forward service/ai-flow-monitor 5000:5000 6080:6000 \
+  --namespace=devicedatahub
+```
+
 Keep each command running in its own terminal. In VS Code, configure a
 PostgreSQL/TimescaleDB extension with host `localhost`, port `5433`, database
 `telemetry`, user `postgres`, and password `postgres`.
 
 Splunk Web is available at `http://localhost:4000`. Use username `admin` and
-the generated password in `.runtime/splunk-values.json`.
-
-To retrieve that password in the repository checkout:
-
-```bash
-python3 -c 'import json; print(json.load(open(".runtime/splunk-values.json"))["splunk"]["adminPassword"])'
-```
+password `admin123`.
 
 The manual Splunk Web forward is:
 
@@ -259,6 +288,10 @@ docker save --output .runtime/kind-tmp/devicedatahub-ai-flow.tar devicedatahub-a
 kind load image-archive .runtime/kind-tmp/devicedatahub-ai-flow.tar --name devicedatahub
 rm .runtime/kind-tmp/devicedatahub-ai-flow.tar
 ```
+
+The monitor UI runs in the `ai-flow-monitor` Deployment using the same
+application image and reads the `mqtt_messages` and `telemetry` tables from
+TimescaleDB.
 
 Deploy the chart:
 

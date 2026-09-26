@@ -23,6 +23,8 @@ context over MQTT.
 | FR-10 | Clean up | `scripts/shutdown.py` stops port-forwards and removes the Helm release, namespace, kind cluster, image, and venv by default. |
 | FR-11 | Collect Kubernetes logs | Fluent Bit forwards application pod logs in `devicedatahub` to Splunk HEC with namespace, pod, and container metadata, including simulator pods; it excludes Splunk and itself to avoid feedback. |
 | FR-12 | Expose Splunk search | Linux startup forwards Splunk Web to `http://localhost:4000`; events are searchable in the `main` index. |
+| FR-13 | Inspect MQTT traffic | A live-refresh UI on `http://localhost:5000` lists incoming messages and published anomaly/status messages from TimescaleDB, newest first, with time filters. |
+| FR-14 | Inspect telemetry records | A UI on `http://localhost:6080` lists TimescaleDB telemetry records newest first with time presets and pagination (container port 6000). |
 
 ## 3. Non-functional requirements
 
@@ -34,6 +36,7 @@ context over MQTT.
 | NFR-04 | Observable operation | Pod status, consumer logs, training logs, inference logs, and port-forward logs are available through documented commands and Splunk searches. |
 | NFR-05 | Credential hygiene | Splunk terms are explicitly accepted; generated Splunk credentials are owner-only local values and are not committed. |
 | NFR-06 | Single source of truth | Root Docker build files, `src/`, `config/`, `scripts/`, Helm chart, training dataset, and lifecycle scripts define the supported flow. |
+| NFR-07 | Shared telemetry visibility | The records UI reads the same `public.telemetry` table used by Grafana; MQTT history is persisted in `public.mqtt_messages`. |
 
 ## 4. Operational interfaces
 
@@ -61,16 +64,22 @@ Table: public.telemetry
 ```text
 URL: http://localhost:4000
 Username: admin
-Password: generated in .runtime/splunk-values.json
+Password: admin123 (local workshop default)
 Index: main
 Example search: index=main kubernetes.namespace_name=devicedatahub
 ```
 
-Retrieve the Splunk password from the repository root with:
+### Application monitors
 
-```bash
-python3 -c 'import json; print(json.load(open(".runtime/splunk-values.json"))["splunk"]["adminPassword"])'
+```text
+MQTT messages: http://localhost:5000
+TimescaleDB records: http://localhost:6080 (container port 6000)
+Refresh: every 30 seconds
+Time ranges: 5 minutes, 15 minutes, 1 hour, 24 hours, or all time
+Ordering: newest first, with load-older pagination
 ```
+
+The HEC token is stored in the private `.runtime/splunk-values.json` file.
 
 ### MQTT output
 
@@ -105,4 +114,6 @@ wifi/alerts/summary
 - Grafana loads the dashboard and displays telemetry after selecting a recent time range.
 - Fluent Bit becomes ready and Splunk searches return events with pod/container metadata.
 - Normal MQTT and simulator deployments both send logs to Splunk.
+- MQTT monitor shows incoming and published messages from `public.mqtt_messages`.
+- Telemetry monitor shows newest-first `public.telemetry` rows with time filtering and pagination.
 - `python3 scripts/shutdown.py` removes runtime resources after validation.

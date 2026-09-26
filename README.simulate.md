@@ -46,18 +46,20 @@ Filter by simulator workload text:
 index=main "ai-flow-simulator"
 ```
 
-Sign in to Splunk Web as `admin`. Retrieve the generated password from the
-repository root with:
-
-```bash
-python3 -c 'import json; print(json.load(open(".runtime/splunk-values.json"))["splunk"]["adminPassword"])'
-```
+Sign in to Splunk Web as `admin` with password `admin123`.
 
 To isolate simulated publisher logs, filter by pod:
 
 ```spl
 index=main kubernetes.namespace_name=devicedatahub kubernetes.pod_name=ai-flow-simulator*
 ```
+
+The MQTT monitor at `http://localhost:5000` includes incoming simulator
+messages and outgoing anomaly/status events. The telemetry monitor at
+`http://localhost:6080` displays the simulator records persisted to TimescaleDB;
+it uses the same `public.telemetry` table as Grafana. Both pages refresh every
+30 seconds and offer 5-minute, 15-minute, 1-hour, 24-hour, and all-time
+filters, newest-first ordering, and load-older pagination.
 
 Override simulator settings in `helm/ai-flow/values.simulate.yaml`:
 

@@ -1,6 +1,6 @@
 apiVersion: v2
 name: ai-flow
-description: MQTT telemetry, TimescaleDB, Grafana, Splunk logs, training, and inference flow
+description: MQTT telemetry, TimescaleDB, Grafana, Splunk logs, live monitors, training, and inference flow
 type: application
 version: 0.1.0
 appVersion: "1.0.0"

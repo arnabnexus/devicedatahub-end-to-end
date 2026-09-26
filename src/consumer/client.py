@@ -46,6 +46,10 @@ class MqttTelemetryConsumer:
     def _on_message(self, client, userdata, msg):
         payload = msg.payload.decode("utf-8", errors="replace")
         logger.info(" ------- Telemetry received from topic '%s': %s \n", msg.topic, payload)
+        try:
+            self.storage.record_mqtt_message("incoming", msg.topic, payload)
+        except Exception:
+            logger.exception("Failed to record incoming MQTT message")
 
         try:
             parsed = json.loads(payload)
