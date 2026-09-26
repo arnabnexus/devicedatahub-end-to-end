@@ -1,0 +1,17 @@
+{{- if .Values.splunk.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ai-flow.fullname" . }}-splunk-dashboard
+  labels:
+    {{- include "ai-flow.labels" . | nindent 4 }}
+data:
+  app.conf: |
+    {{- .Files.Get "files/splunk/app.conf" | nindent 4 }}
+  default.meta: |
+    {{- .Files.Get "files/splunk/default.meta" | nindent 4 }}
+  default.xml: |
+    {{- .Files.Get "files/splunk/default.xml" | nindent 4 }}
+  pod_logs.xml: |
+    {{- .Files.Get "files/splunk/pod_logs.xml" | nindent 4 }}
+{{- end }}

@@ -1,0 +1,6 @@
+[]
+access = read : [ * ], write : [ admin ]
+
+[views/pod_logs]
+access = read : [ * ], write : [ admin ]
+export = system

@@ -40,6 +40,31 @@ spec:
     spec:
       securityContext:
         fsGroup: 41812
+      initContainers:
+        - name: install-device-datahub-dashboard
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -ec
+            - |
+              mkdir -p /app/default/data/ui/views /app/default/data/ui/nav /app/metadata
+              cp /dashboard/app.conf /app/default/app.conf
+              cp /dashboard/default.meta /app/metadata/default.meta
+              cp /dashboard/default.xml /app/default/data/ui/nav/default.xml
+              cp /dashboard/pod_logs.xml /app/default/data/ui/views/pod_logs.xml
+          securityContext:
+            runAsUser: 41812
+            runAsGroup: 41812
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: dashboard-source
+              mountPath: /dashboard
+              readOnly: true
+            - name: dashboard-app
+              mountPath: /app
       containers:
         - name: splunk
           image: {{ .Values.splunk.image | quote }}
@@ -75,6 +100,8 @@ spec:
             - name: splunk-defaults
               mountPath: /tmp/defaults
               readOnly: true
+            - name: dashboard-app
+              mountPath: /opt/splunk/etc/apps/device_datahub_monitor
           resources:
             {{- toYaml .Values.splunk.resources | nindent 12 }}
       volumes:
@@ -84,4 +111,9 @@ spec:
         - name: splunk-defaults
           secret:
             secretName: {{ include "ai-flow.fullname" . }}-splunk-defaults
+        - name: dashboard-source
+          configMap:
+            name: {{ include "ai-flow.fullname" . }}-splunk-dashboard
+        - name: dashboard-app
+          emptyDir: {}
 {{- end }}

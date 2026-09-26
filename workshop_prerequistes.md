@@ -407,6 +407,11 @@ expose the service to an untrusted network. If Splunk was already initialized
 with an earlier password, sign in with that existing password and change it in
 Splunk Web; the persistent Splunk data volume can retain its previous password.
 
+The provisioned live pod-log dashboard is at
+`http://localhost:4000/app/device_datahub_monitor/pod_logs`. Choose a Kubernetes
+pod or **All pods** from the pod filter. It defaults to the last 15 minutes and
+refreshes the log table every 10 seconds.
+
 The application monitor pages are:
 
 ```text

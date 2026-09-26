@@ -1,0 +1,43 @@
+<form version="1.1" theme="light">
+  <label>DeviceDataHub Live Pod Logs</label>
+  <description>Filter Kubernetes container logs by pod and follow recent events.</description>
+  <fieldset submitButton="false">
+    <input type="time" token="time_range">
+      <label>Time range</label>
+      <default>
+        <earliest>-15m</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="pod_name" searchWhenChanged="true">
+      <label>Kubernetes pod</label>
+      <choice value="*">All pods</choice>
+      <default>*</default>
+      <search>
+        <query>index=main kubernetes.namespace_name=devicedatahub | stats count by kubernetes.pod_name | sort kubernetes.pod_name</query>
+        <earliest>-24h</earliest>
+        <latest>now</latest>
+      </search>
+      <fieldForLabel>kubernetes.pod_name</fieldForLabel>
+      <fieldForValue>kubernetes.pod_name</fieldForValue>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Live container logs</title>
+      <table>
+        <search>
+          <query>index=main kubernetes.namespace_name=devicedatahub kubernetes.pod_name="$pod_name$" | table _time kubernetes.pod_name kubernetes.container_name _raw | sort - _time</query>
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
+          <refresh>10s</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+</form>

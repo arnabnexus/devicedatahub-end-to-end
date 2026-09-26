@@ -53,7 +53,7 @@ data:
         TLS.Verify                Off
         Event_Index               main
         Event_Source              {{ .Release.Namespace }}
-        Event_Sourcetype          kube:container:cri
+        Event_Sourcetype          _json
         Retry_Limit               False
 ---
 apiVersion: v1

@@ -70,6 +70,9 @@ Events are indexed in `main` with namespace, pod, and container metadata.
 Splunk Web is available at `http://localhost:4000`; sign in as `admin` with
 password `admin123`. Shutdown preserves the HEC credentials file for subsequent
 runs.
+The default live log dashboard is at
+`/app/device_datahub_monitor/pod_logs`; it filters on Kubernetes pod metadata,
+defaults to a 15-minute window, and refreshes its results every 10 seconds.
 
 The MQTT monitor at `http://localhost:5000` shows incoming and published payloads
 stored in `public.mqtt_messages`. The TimescaleDB viewer at

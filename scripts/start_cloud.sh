@@ -192,6 +192,7 @@ print_followup_commands() {
     printf '  Splunk username: admin\n'
     printf '  Splunk password: admin123\n'
     printf '  Splunk UI: http://localhost:4000\n'
+    printf '  Splunk live pod logs dashboard: http://localhost:4000/app/device_datahub_monitor/pod_logs\n'
     printf '  MQTT message UI: http://localhost:5000\n'
     printf '  TimescaleDB records UI: http://localhost:6080\n'
     printf '    Time ranges: Last 5 minutes, 15 minutes, 1 hour, 24 hours, or All time\n'
