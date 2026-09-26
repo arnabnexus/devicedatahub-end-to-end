@@ -51,9 +51,9 @@ data:
         Splunk_Token              ${SPLUNK_HEC_TOKEN}
         TLS                       Off
         TLS.Verify                Off
-        Splunk_Index              main
-        Splunk_Source             {{ .Release.Namespace }}
-        Splunk_Sourcetype         kube:container:cri
+        Event_Index               main
+        Event_Source              {{ .Release.Namespace }}
+        Event_Sourcetype          kube:container:cri
         Retry_Limit               False
 ---
 apiVersion: v1
