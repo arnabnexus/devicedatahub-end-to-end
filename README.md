@@ -66,7 +66,10 @@ as `admin` with password `admin123`.
 The provisioned **DeviceDataHub Live Pod Logs** dashboard is available at
 `http://localhost:4000/en-US/app/device_datahub_monitor/pod_logs`. It has a Kubernetes
 pod filter, defaults to the last 15 minutes, and refreshes the log table every
-10 seconds.
+10 seconds. It is also the default landing view when opening the DeviceDataHub
+app. To pin it in Splunk's personal Favorites list, sign in as `admin`, open the
+dashboard, and click the star / **Add to favorites** control. Favorites are
+per-account, so each Splunk user pins it separately.
 The Splunk Enterprise image is resource intensive; a 16 GB RAM laptop and at
 least 30 GB free disk space are recommended.
 The first startup can take several minutes while large container images are

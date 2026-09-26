@@ -483,7 +483,10 @@ Splunk Web; the persistent Splunk data volume can retain its previous password.
 The provisioned live pod-log dashboard is at
 `http://localhost:4000/en-US/app/device_datahub_monitor/pod_logs`. Choose a Kubernetes
 pod or **All pods** from the pod filter. It defaults to the last 15 minutes and
-refreshes the log table every 10 seconds.
+refreshes the log table every 10 seconds. It is the default landing view in the
+DeviceDataHub Splunk app. To pin it in the `admin` account's Favorites, click
+the star / **Add to favorites** control while viewing the dashboard. Splunk
+Favorites are per-account, so other users must pin it in their own accounts.
 
 The application monitor pages are:
 
@@ -504,6 +507,37 @@ only provides input telemetry at `weh-device/network`; inference generates the
 output events after reading stored telemetry. The telemetry page shows recent
 device/radio measurements such as channel utilization, RSSI, client counts, and
 retry/failure counts.
+
+### Manual port-forward backup
+
+If startup did not open a forward or its terminal was closed, run the relevant
+command below from another Linux terminal. Keep each command running in the
+foreground while using its URL; stop it with `Ctrl+C` in that terminal.
+
+Grafana (`http://localhost:3000`):
+
+```bash
+kubectl port-forward service/ai-flow-grafana 3000:3000 --namespace=devicedatahub
+```
+
+TimescaleDB (`localhost:5433`):
+
+```bash
+kubectl port-forward service/ai-flow-timescaledb 5433:5432 --namespace=devicedatahub
+```
+
+Splunk Web (`http://localhost:4000`):
+
+```bash
+kubectl port-forward service/ai-flow-splunk 4000:8000 --namespace=devicedatahub
+```
+
+MQTT messages (`http://localhost:5000`) and telemetry records
+(`http://localhost:6080`):
+
+```bash
+kubectl port-forward service/ai-flow-monitor 5000:5000 6080:6000 --namespace=devicedatahub
+```
 
 For a quicker rerun when application source has not changed and the local image
 already exists, run `SKIP_IMAGE_BUILD=true ./scripts/start_cloud.sh`. Use the
