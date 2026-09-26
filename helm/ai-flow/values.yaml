@@ -6,7 +6,7 @@ image:
 
 mqtt:
   host: 0.tcp.in.ngrok.io
-  port: 24839
+  port: 19023
   topic: weh-device/network
   clientId: telemetry-consumer
   username: ""
@@ -25,7 +25,7 @@ simulator:
 
 alerts:
   host: 0.tcp.in.ngrok.io
-  port: 24839
+  port: 19023
   baseTopic: wifi/alerts
   username: ""
   password: ""

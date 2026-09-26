@@ -172,11 +172,11 @@ The main settings are:
 ```yaml
 mqtt:
   host: 0.tcp.in.ngrok.io
-  port: 24839
+  port: 19023
   topic: weh-device/network
 alerts:
   host: 0.tcp.in.ngrok.io
-  port: 24839
+  port: 19023
   baseTopic: wifi/alerts
 database:
   name: telemetry
