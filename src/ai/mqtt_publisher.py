@@ -38,10 +38,6 @@ class MQTTAlertPublisher:
         )
         self.client: Optional[mqtt.Client] = None
         self.connected = False
-        self.disconnect_log_interval = float(
-            os.getenv("MQTT_DISCONNECT_LOG_INTERVAL", "300")
-        )
-        self._last_disconnect_log = 0.0
 
     def _build_client(self) -> mqtt.Client:
         # Use VERSION1 API — proven reliable against ngro k TCP tunnels
@@ -55,7 +51,6 @@ class MQTTAlertPublisher:
 
         client.on_connect = self._on_connect
         client.on_disconnect = self._on_disconnect
-        client.on_publish = self._on_publish
         if self.username:
             client.username_pw_set(self.username, self.password)
         # Keep transient broker/network outages from producing a tight retry loop.
@@ -138,16 +133,6 @@ class MQTTAlertPublisher:
 
     def _on_disconnect(self, client, userdata, rc):
         self.connected = False
-        now = time.monotonic()
-        if (
-            rc != 0
-            and now - self._last_disconnect_log >= self.disconnect_log_interval
-        ):
-            self._last_disconnect_log = now
-            #logger.warning(f"Unexpected MQTT disconnection (rc={rc})")
-
-    def _on_publish(self, client, userdata, mid):
-        pass
 
     def publish_anomaly_alert(
         self, device_id: str, anomaly_data: Dict[str, Any]

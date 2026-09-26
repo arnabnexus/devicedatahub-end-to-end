@@ -1,7 +1,5 @@
 import argparse
-import json
 import pandas as pd
-from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, roc_auc_score, confusion_matrix
 from sklearn.preprocessing import StandardScaler
@@ -10,7 +8,6 @@ from .data import (
     load_json_training_data,
     load_csv_training_data,
     prepare_ml_features,
-    ML_FEATURE_COLUMNS
 )
 from .model_io import save_model
 from sklearn.ensemble import IsolationForest

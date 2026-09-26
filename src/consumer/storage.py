@@ -340,24 +340,3 @@ class TelemetryRepository:
                     )
 
         logger.info("Stored %s wifi telemetry rows for device_id=%s", len(wifi_rows), parsed.get("device_id"))
-
-    def insert_message(
-        self,
-        topic: str,
-        payload: str,
-        device_id: str | None = None,
-        ap_mac: str | None = None,
-        serial_number: str | None = None,
-        firmware_version: str | None = None,
-        uptime_seconds: int | None = None,
-        cpu_utilization_pct: float | None = None,
-        memory_utilization_pct: float | None = None,
-        connected_clients: int | None = None,
-        radio_band: str | None = None,
-        channel: int | None = None,
-        channel_utilization_pct: float | None = None,
-        noise_floor_dbm: float | None = None,
-        max_connected_device: int | None = None,
-        timestamp_epoch: int | None = None,
-    ) -> None:
-        self.insert_wifi_metrics(payload, topic)

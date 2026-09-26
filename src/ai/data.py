@@ -1,23 +1,6 @@
 import pandas as pd
-import numpy as np
 import json
-from pathlib import Path
-from typing import Dict, List, Any, Tuple
-
-# WiFi congestion metrics from telemetry
-CONGESTION_METRICS = [
-    'channel_utilization_pct',
-    'cca_busy_pct',
-    'tx_airtime_pct',
-    'rx_airtime_pct',
-    'noise_floor_dbm',
-    'neighbor_ap_count',
-    'strong_neighbor_ap_count',
-    'same_channel_ap_count',
-    'strong_same_channel_ap_count',
-    'obss_utilization_pct',
-    'interference_utilization_pct'
-]
+from typing import List, Tuple
 
 # All numeric features that can be used for ML model training
 # These come directly from the radio_stats table
@@ -114,78 +97,6 @@ def load_csv_training_data(csv_path: str) -> pd.DataFrame:
     df = pd.read_csv(csv_path)
     df['timestamp'] = pd.to_datetime(df.get('timestamp', df.get('ts', None)))
     return df
-
-
-def build_features_from_df(df, window_minutes=5):
-    """
-    Build features from telemetry data for congestion anomaly detection.
-    
-    Uses WiFi-specific metrics from the congestion table.
-    For each device/radio, computes statistics over the window.
-    
-    Args:
-        df: DataFrame with telemetry data (should include device_id, radio, timestamp, and WiFi metrics)
-        window_minutes: Aggregation window in minutes
-    
-    Returns:
-        DataFrame with engineered features
-    """
-    df['timestamp'] = pd.to_datetime(df.get('timestamp', df.get('ts', None)))
-    out = []
-    
-    # Group by device and radio for multi-band analysis
-    group_keys = ['device_id', 'radio'] if 'radio' in df.columns else ['device_id']
-    
-    for group_val, g in df.groupby(group_keys):
-        group_dict = {}
-        if isinstance(group_val, tuple):
-            for key, val in zip(group_keys, group_val):
-                group_dict[key] = val
-        else:
-            group_dict[group_keys[0]] = group_val
-            
-        g_sorted = g.sort_values('timestamp')
-        
-        # Build features for all available congestion metrics
-        for metric in CONGESTION_METRICS:
-            if metric in g.columns:
-                vals = g_sorted[metric].dropna().values
-                if len(vals) > 0:
-                    group_dict[f'{metric}_mean'] = float(np.mean(vals))
-                    group_dict[f'{metric}_max'] = float(np.max(vals))
-                    group_dict[f'{metric}_min'] = float(np.min(vals))
-                    group_dict[f'{metric}_std'] = float(np.std(vals))
-                    # Trend: is metric increasing?
-                    if len(vals) > 1:
-                        group_dict[f'{metric}_trend'] = float(vals[-1] - vals[0])
-                    else:
-                        group_dict[f'{metric}_trend'] = 0.0
-        
-        out.append(group_dict)
-    
-    return pd.DataFrame(out)
-
-
-def build_features_for_inference(telemetry_row: Dict[str, Any]) -> Dict[str, float]:
-    """
-    Extract and normalize features from a single telemetry row for inference.
-    
-    Args:
-        telemetry_row: Single telemetry measurement dict
-        
-    Returns:
-        Dictionary of feature values ready for model inference
-    """
-    features = {}
-    
-    # Extract all available congestion metrics
-    for metric in CONGESTION_METRICS:
-        if metric in telemetry_row:
-            val = telemetry_row[metric]
-            if val is not None:
-                features[metric] = float(val)
-    
-    return features
 
 
 def prepare_ml_features(df: pd.DataFrame, feature_columns: List[str] = None) -> pd.DataFrame:

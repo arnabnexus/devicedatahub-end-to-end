@@ -5,8 +5,6 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 VENV_DIR="$ROOT_DIR/.venv"
 NAMESPACE="devicedatahub"
-GRAFANA_FORWARD="service/ai-flow-grafana 3000:3000"
-TIMESCALE_FORWARD="service/ai-flow-timescaledb 5433:5432"
 RUNTIME_DIR="$ROOT_DIR/.runtime"
 
 log() {
@@ -107,7 +105,7 @@ if [[ -t 0 ]]; then
 fi
 
 log "Starting the Kubernetes stack"
-startup_args=(scripts/startup.py --no-follow)
+startup_args=(scripts/startup.py)
 if [[ "$SIMULATE" == true ]]; then
     log "Simulation enabled: using helm/ai-flow/values.simulate.yaml"
     startup_args+=(--values helm/ai-flow/values.simulate.yaml)
@@ -165,22 +163,6 @@ start_background_forward() {
     log "$name port-forward started in background (PID $pid)"
 }
 
-follow_logs() {
-    local log_args=(
-        logs
-        -n "$NAMESPACE"
-        -l "app.kubernetes.io/instance=ai-flow"
-        --all-containers=true
-        --max-log-requests=20
-        --prefix
-        --tail=100
-        -f
-    )
-    log "Starting all Kubernetes component logs in this terminal"
-    log "Log command: $KUBECTL ${log_args[*]}"
-    exec "$KUBECTL" "${log_args[@]}"
-}
-
 if ! run_forward "DeviceDataHub Grafana" "service/ai-flow-grafana" "3000:3000"; then
     log "No graphical terminal emulator found; starting detached port-forwards."
     start_background_forward "grafana" "service/ai-flow-grafana" "3000:3000"
@@ -189,17 +171,21 @@ if ! run_forward "DeviceDataHub Grafana" "service/ai-flow-grafana" "3000:3000"; 
     log "Grafana log: $RUNTIME_DIR/grafana.port-forward.log"
     log "TimescaleDB: localhost:5433"
     log "TimescaleDB log: $RUNTIME_DIR/timescaledb.port-forward.log"
-    follow_logs
+    log "Grafana URL: http://localhost:3000"
+    log "Use the kubectl log commands printed above to inspect workload logs."
+    exit 0
 fi
 
 if ! run_forward "DeviceDataHub TimescaleDB" "service/ai-flow-timescaledb" "5433:5432"; then
     log "Grafana terminal opened, but no second terminal emulator was available."
     start_background_forward "timescaledb" "service/ai-flow-timescaledb" "5433:5432"
-    follow_logs
+    log "Grafana URL: http://localhost:3000"
+    log "Use the kubectl log commands printed above to inspect workload logs."
+    exit 0
 fi
 
 log "Child terminals started"
 log "Grafana: http://localhost:3000"
 log "TimescaleDB: localhost:5433, database telemetry"
 log "Keep both child terminals open while using Grafana or the database."
-follow_logs
+log "Use the kubectl log commands printed above to inspect workload logs."

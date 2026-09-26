@@ -33,7 +33,7 @@ clone the repository yourself, then run the commands above from that checkout.
 3. Activates the virtual environment.
 4. Installs `requirements.txt`.
 5. Asks whether to enable the local MQTT simulator.
-6. Runs `scripts/startup.py --no-follow` with `values.simulate.yaml` only when enabled.
+6. Runs `scripts/startup.py` with `values.simulate.yaml` only when enabled.
 7. Creates or reuses the `devicedatahub` kind cluster.
 8. Builds `devicedatahub-ai-flow:latest`.
 9. Loads the image into the kind nodes.
@@ -42,6 +42,10 @@ clone the repository yourself, then run the commands above from that checkout.
 12. Trains the model from `data/train_1000.json` in the inference pod init container.
 13. Starts `inference.py` only after training and database readiness succeed.
 14. Starts Grafana and TimescaleDB port-forward processes.
+
+The launcher prints the Grafana URL and `kubectl logs` commands for all
+components and key workloads. It does not stream logs automatically; run a
+printed command in a terminal when you want to inspect or follow logs.
 
 GitHub CLI is not required for this public HTTPS repository. Git can pull it
 without `gh auth login`.

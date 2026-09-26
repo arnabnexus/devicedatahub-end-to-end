@@ -158,37 +158,19 @@ def install_stack(tools: dict[str, str], *, rebuild: bool, values_file: str | No
     run(command)
 
 
-def show_logs(kubectl: str, follow: bool) -> None:
+def show_logs(kubectl: str) -> None:
     run([kubectl, "get", "pods", "-n", NAMESPACE, "-o", "wide"])
-    if follow:
-        run(
-            [
-                kubectl,
-                "logs",
-                "-n",
-                NAMESPACE,
-                "-l",
-                "app.kubernetes.io/instance=ai-flow",
-                "--all-containers=true",
-                "--max-log-requests=20",
-                "--prefix",
-                "--tail=100",
-                "-f",
-            ]
-        )
-    else:
-        print(
-            f"Follow all component logs with: {kubectl} logs -n {NAMESPACE} "
-            "-l app.kubernetes.io/instance=ai-flow --all-containers=true "
-            "--max-log-requests=20 --prefix --tail=100 -f",
-            flush=True,
-        )
+    print(f"Grafana: http://localhost:3000 (after port-forwarding is started)", flush=True)
+    print("Kubernetes log commands:", flush=True)
+    print(f"  {kubectl} logs -n {NAMESPACE} -l app.kubernetes.io/instance=ai-flow --all-containers=true --max-log-requests=20 --prefix --tail=100 -f", flush=True)
+    print(f"  {kubectl} logs -n {NAMESPACE} deploy/ai-flow-consumer --all-containers=true --tail=100 -f", flush=True)
+    print(f"  {kubectl} logs -n {NAMESPACE} deploy/ai-flow-inference -c inference --tail=100 -f", flush=True)
+    print(f"  {kubectl} logs -n {NAMESPACE} deploy/ai-flow-inference -c train-model --tail=200", flush=True)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Start the DeviceDataHub AI flow on Kubernetes")
     parser.add_argument("--no-build", action="store_true", help="Reuse the local image")
-    parser.add_argument("--no-follow", action="store_true", help="Start pods and return after showing status")
     parser.add_argument("--values", help="Private Helm values file for broker and database settings")
     parser.add_argument("--delete-cluster", action="store_true", help="Delete the kind cluster and exit")
     args = parser.parse_args()
@@ -202,7 +184,7 @@ def main() -> int:
 
     ensure_cluster(tools["kind"], tools["docker"])
     install_stack(tools, rebuild=not args.no_build, values_file=args.values)
-    show_logs(tools["kubectl"], follow=not args.no_follow)
+    show_logs(tools["kubectl"])
     return 0
 
 

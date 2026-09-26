@@ -362,7 +362,7 @@ The launcher will:
 10. Train the model in the inference init container.
 11. Start the consumer, inference, TimescaleDB, and Grafana workloads.
 12. Start local port-forwards.
-13. Stream Kubernetes logs.
+13. Print Kubernetes log commands for inspecting or following workload logs.
 
 At the simulator prompt:
 

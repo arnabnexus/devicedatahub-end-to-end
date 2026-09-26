@@ -1,7 +1,6 @@
 import json
 import logging
 import time
-from typing import Any
 
 import paho.mqtt.client as mqtt
 
@@ -80,15 +79,6 @@ class MqttTelemetryConsumer:
         except KeyboardInterrupt:
             logger.info("Shutdown requested")
             self.disconnect()
-
-    def publish(self, payload: str | dict[str, Any], topic: str | None = None) -> None:
-        target_topic = topic or self.settings.topic
-        if isinstance(payload, dict):
-            payload = json.dumps(payload)
-
-        result = self.client.publish(target_topic, payload, qos=self.settings.qos)
-        result.wait_for_publish()
-        logger.info("Published telemetry to %s: %s", target_topic, payload)
 
     def disconnect(self) -> None:
         self.client.loop_stop()
