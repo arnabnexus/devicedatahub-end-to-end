@@ -493,7 +493,9 @@ audited in `public.mqtt_messages`; the records page reads `public.telemetry`,
 the same table used by Grafana.
 
 The MQTT page shows direction, topic, delivery status, and payload for incoming
-telemetry and published anomaly/status events. The telemetry page shows recent
+telemetry and inference-published anomaly/action/summary events. The simulator
+only provides input telemetry at `weh-device/network`; inference generates the
+output events after reading stored telemetry. The telemetry page shows recent
 device/radio measurements such as channel utilization, RSSI, client counts, and
 retry/failure counts.
 

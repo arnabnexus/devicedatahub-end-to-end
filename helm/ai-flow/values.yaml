@@ -26,7 +26,7 @@ simulator:
 alerts:
   host: 0.tcp.in.ngrok.io
   port: 19023
-  baseTopic: wifi/alerts
+  baseTopic: weh-device
   username: ""
   password: ""
   enabled: true

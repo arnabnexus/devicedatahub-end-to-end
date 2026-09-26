@@ -27,7 +27,7 @@ class MQTTAlertPublisher:
         self.broker_port = int(
             broker_port if broker_port is not None else os.getenv("MQTT_PORT", "17241")
         )
-        self.base_topic = base_topic or os.getenv("MQTT_BASE_TOPIC", "wifi/alerts")
+        self.base_topic = (base_topic or os.getenv("MQTT_BASE_TOPIC", "weh-device")).rstrip("/")
         self.client_id = client_id or os.getenv(
             "MQTT_CLIENT_ID", f"anomaly-detector-{os.getpid()}"
         )
@@ -168,14 +168,14 @@ class MQTTAlertPublisher:
             self.connected = False
             return False
 
-    def publish_device_status(
+    def publish_device_action(
         self, device_id: str, status: str, metrics: Dict[str, Any]
     ) -> bool:
-        """Publish to {base_topic}/{device_id}/status."""
+        """Publish the recommended action to {base_topic}/{device_id}/action."""
         if not self.ensure_connected():
             return False
 
-        topic = f"{self.base_topic}/{device_id}/status"
+        topic = f"{self.base_topic}/{device_id}/action"
         payload = json.dumps(
             {
                 "status": status,
@@ -196,16 +196,16 @@ class MQTTAlertPublisher:
             self._record_published(topic, payload, succeeded)
             return succeeded
         except Exception as e:
-            logger.error(f"Error publishing status: {e}")
+            logger.error(f"Error publishing action: {e}")
             self.connected = False
             return False
 
     def publish_batch_summary(self, summary: Dict[str, Any]) -> bool:
-        """Publish to {base_topic}/summary."""
+        """Publish the polling summary to {base_topic}/alerts/summary."""
         if not self.ensure_connected():
             return False
 
-        topic = f"{self.base_topic}/summary"
+        topic = f"{self.base_topic}/alerts/summary"
         payload = json.dumps(summary)
 
         try:

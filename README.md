@@ -87,7 +87,7 @@ Splunk Web to `admin123`.
 
 The startup output also prints two application monitor URLs:
 
-- `http://localhost:5000` shows incoming MQTT messages and published anomaly/status messages, newest first.
+- `http://localhost:5000` shows incoming MQTT messages and published anomaly/action messages, newest first.
 - `http://localhost:6080` shows telemetry rows stored in TimescaleDB, newest first; this is the same `public.telemetry` table Grafana reads. The container still listens on `6000`; startup forwards the browser to `6080` because Chromium blocks local port `6000`.
 
 Both pages auto-refresh every 30 seconds, support Last 5 minutes, Last 15
@@ -238,13 +238,17 @@ inference: MQTT connected
 inference: Published anomaly message
 ```
 
-Anomaly messages are published to:
+Inference publishes anomaly, action, and poll-summary messages to:
 
 ```text
-wifi/alerts/{device_id}/anomaly
-wifi/alerts/{device_id}/status
-wifi/alerts/summary
+weh-device/{device_id}/anomaly
+weh-device/{device_id}/action
+weh-device/alerts/summary
 ```
+
+The optional simulator only generates input telemetry for `weh-device/network`.
+It does not fabricate anomaly or action events; inference publishes those after
+processing telemetry read from TimescaleDB.
 
 Messages include the reason code, training-aligned scenario, layman
 explanation, recommended action, metrics, and publish result.
@@ -285,7 +289,7 @@ mqtt:
 alerts:
   host: 0.tcp.in.ngrok.io
   port: 19023
-  baseTopic: wifi/alerts
+  baseTopic: weh-device
 database:
   name: telemetry
   user: postgres

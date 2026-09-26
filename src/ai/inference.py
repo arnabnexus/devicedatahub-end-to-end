@@ -324,7 +324,7 @@ def run_loop():
                         reason_code, scenario = classify_reason(features)
                         explanation, recommended_action = layman_explanation(reason_code, scenario)
                         anomaly_topic = f"{mqtt_pub.base_topic}/{device_id}/anomaly" if mqtt_pub else None
-                        status_topic = f"{mqtt_pub.base_topic}/{device_id}/status" if mqtt_pub else None
+                        action_topic = f"{mqtt_pub.base_topic}/{device_id}/action" if mqtt_pub else None
                         anomaly_record = {
                             "detected_at": now_iso,
                             "poll": poll_count,
@@ -411,7 +411,7 @@ def run_loop():
                             )
                             if alert_published:
                                 published += 1
-                            status_published = mqtt_pub.publish_device_status(
+                            action_published = mqtt_pub.publish_device_action(
                                 device_id,
                                 "anomaly",
                                 {
@@ -421,11 +421,11 @@ def run_loop():
                                     "scenario": scenario,
                                     "layman_explanation": explanation,
                                     "recommended_action": recommended_action,
-                                    "mqtt_topic": status_topic,
+                                    "mqtt_topic": action_topic,
                                 },
                             )
                             print(
-                                f"   📡 Published status message: topic={status_topic} success={status_published}",
+                                f"   📡 Published action message: topic={action_topic} success={action_published}",
                                 flush=True,
                             )
                     else:

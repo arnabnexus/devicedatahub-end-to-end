@@ -9,7 +9,7 @@ mqtt:
 alerts:
   host: ai-flow-mqtt-broker
   port: 1883
-  baseTopic: wifi/alerts
+  baseTopic: weh-device
   username: ""
   password: ""
   enabled: true

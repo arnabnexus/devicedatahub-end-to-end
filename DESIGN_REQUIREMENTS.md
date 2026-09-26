@@ -17,13 +17,13 @@ context over MQTT.
 | FR-04 | Train the model | Inference initialization trains on `data/train_1000.json` and writes `model_artifacts/model.pkl`. |
 | FR-05 | Run inference | Inference polls recent telemetry, scores each radio, and applies the configured alert threshold. |
 | FR-06 | Explain anomalies | Every published anomaly contains a reason code, scenario, plain-language explanation, and recommended action. |
-| FR-07 | Publish alerts | Anomaly, status, and summary payloads are published to the configured MQTT topics. |
+| FR-07 | Publish alerts | Anomaly, action, and summary payloads are published to `weh-device/{device_id}/anomaly`, `weh-device/{device_id}/action`, and `weh-device/alerts/summary`. |
 | FR-08 | Provision Grafana | Grafana starts with the TimescaleDB datasource and dashboard JSON imported automatically. |
 | FR-09 | Expose local access | Linux startup forwards Grafana to `localhost:3000`, TimescaleDB to `localhost:5433`, and Splunk Web to `localhost:4000`. |
 | FR-10 | Clean up | `scripts/shutdown.py` stops port-forwards and removes the Helm release, namespace, kind cluster, image, and venv by default. |
 | FR-11 | Collect Kubernetes logs | Fluent Bit forwards application pod logs in `devicedatahub` to Splunk HEC with namespace, pod, and container metadata, including simulator pods; it excludes Splunk and itself to avoid feedback. |
 | FR-12 | Expose Splunk search | Linux startup forwards Splunk Web to `http://localhost:4000`; events are searchable in the `main` index. |
-| FR-13 | Inspect MQTT traffic | A live-refresh UI on `http://localhost:5000` lists incoming messages and published anomaly/status messages from TimescaleDB, newest first, with time filters. |
+| FR-13 | Inspect MQTT traffic | A live-refresh UI on `http://localhost:5000` lists incoming messages and published anomaly/action messages from TimescaleDB, newest first, with time filters. |
 | FR-14 | Inspect telemetry records | A UI on `http://localhost:6080` lists TimescaleDB telemetry records newest first with time presets and pagination (container port 6000). |
 | FR-15 | Search live pod logs | Splunk provisions a DeviceDataHub dashboard at `/en-US/app/device_datahub_monitor/pod_logs` with a Kubernetes pod filter, All pods choice, and refreshing log table. |
 
@@ -85,10 +85,13 @@ The HEC token is stored in the private `.runtime/splunk-values.json` file.
 ### MQTT output
 
 ```text
-wifi/alerts/{device_id}/anomaly
-wifi/alerts/{device_id}/status
-wifi/alerts/summary
+weh-device/{device_id}/anomaly
+weh-device/{device_id}/action
+weh-device/alerts/summary
 ```
+
+The simulator publishes only input telemetry to `weh-device/network`; inference
+publishes the anomaly, action, and summary outputs above.
 
 ## 5. Anomaly reason codes
 

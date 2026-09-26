@@ -21,13 +21,15 @@ The simulator publishes:
 weh-device/network
 ```
 
-The consumer writes those messages to TimescaleDB, and inference publishes
-anomaly explanations to:
+The consumer writes those input messages to TimescaleDB. The simulator only
+simulates this incoming telemetry; it does not publish anomaly/action outputs.
+Inference reads the stored records and publishes anomaly, action, and summary
+events to:
 
 ```text
-wifi/alerts/{device_id}/anomaly
-wifi/alerts/{device_id}/status
-wifi/alerts/summary
+weh-device/{device_id}/anomaly
+weh-device/{device_id}/action
+weh-device/alerts/summary
 ```
 
 The same Fluent Bit DaemonSet collects broker, simulator, consumer, inference,
@@ -55,7 +57,7 @@ index=main kubernetes.namespace_name=devicedatahub kubernetes.pod_name=ai-flow-s
 ```
 
 The MQTT monitor at `http://localhost:5000` includes incoming simulator
-messages and outgoing anomaly/status events. The telemetry monitor at
+messages and outgoing inference anomaly/action events. The telemetry monitor at
 `http://localhost:6080` displays the simulator records persisted to TimescaleDB;
 it uses the same `public.telemetry` table as Grafana. Both pages refresh every
 30 seconds and offer 5-minute, 15-minute, 1-hour, 24-hour, and all-time
