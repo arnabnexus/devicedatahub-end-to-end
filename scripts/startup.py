@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import stat
 import subprocess
@@ -29,10 +30,11 @@ def run(
     command: list[str],
     *,
     input_text: str | None = None,
+    env: dict[str, str] | None = None,
     check: bool = True,
 ) -> None:
     print(f"$ {' '.join(command)}", flush=True)
-    subprocess.run(command, cwd=ROOT, check=check, input=input_text, text=True)
+    subprocess.run(command, cwd=ROOT, check=check, input=input_text, text=True, env=env)
 
 
 def output(command: list[str]) -> str:
@@ -121,7 +123,14 @@ def ensure_cluster(kind: str, docker: str) -> None:
 def install_stack(tools: dict[str, str], *, rebuild: bool, values_file: str | None) -> None:
     if rebuild:
         run([tools["docker"], "build", "-t", IMAGE, "."])
-    run([tools["kind"], "load", "docker-image", IMAGE, "--name", KIND_CLUSTER])
+    kind_tmp = ROOT / ".runtime" / "kind-tmp"
+    kind_tmp.mkdir(parents=True, exist_ok=True)
+    kind_env = os.environ.copy()
+    kind_env["TMPDIR"] = str(kind_tmp)
+    run(
+        [tools["kind"], "load", "docker-image", IMAGE, "--name", KIND_CLUSTER],
+        env=kind_env,
+    )
     namespace_yaml = subprocess.check_output(
         [tools["kubectl"], "create", "namespace", NAMESPACE, "--dry-run=client", "-o", "yaml"],
         cwd=ROOT,
