@@ -25,7 +25,7 @@ context over MQTT.
 | FR-12 | Expose Splunk search | Linux startup forwards Splunk Web to `http://localhost:4000`; events are searchable in the `main` index. |
 | FR-13 | Inspect MQTT traffic | A live-refresh UI on `http://localhost:5000` lists incoming messages and published anomaly/status messages from TimescaleDB, newest first, with time filters. |
 | FR-14 | Inspect telemetry records | A UI on `http://localhost:6080` lists TimescaleDB telemetry records newest first with time presets and pagination (container port 6000). |
-| FR-15 | Search live pod logs | Splunk provisions a DeviceDataHub dashboard at `/app/device_datahub_monitor/pod_logs` with a Kubernetes pod filter, All pods choice, and refreshing log table. |
+| FR-15 | Search live pod logs | Splunk provisions a DeviceDataHub dashboard at `/en-US/app/device_datahub_monitor/pod_logs` with a Kubernetes pod filter, All pods choice, and refreshing log table. |
 
 ## 3. Non-functional requirements
 

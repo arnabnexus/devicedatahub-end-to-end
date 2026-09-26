@@ -64,7 +64,7 @@ The launcher prints the Grafana and Splunk URLs, plus `kubectl logs` commands.
 Splunk Web is forwarded from local port `4000` to container port `8000`; sign in
 as `admin` with password `admin123`.
 The provisioned **DeviceDataHub Live Pod Logs** dashboard is available at
-`http://localhost:4000/app/device_datahub_monitor/pod_logs`. It has a Kubernetes
+`http://localhost:4000/en-US/app/device_datahub_monitor/pod_logs`. It has a Kubernetes
 pod filter, defaults to the last 15 minutes, and refreshes the log table every
 10 seconds.
 The Splunk Enterprise image is resource intensive; a 16 GB RAM laptop and at
@@ -197,7 +197,7 @@ Splunk Web is available at `http://localhost:4000`. Use username `admin` and
 password `admin123`.
 
 Open the default live pod-log dashboard at
-`http://localhost:4000/app/device_datahub_monitor/pod_logs`. Choose a pod from
+`http://localhost:4000/en-US/app/device_datahub_monitor/pod_logs`. Choose a pod from
 the **Kubernetes pod** dropdown or select **All pods**. The dashboard defaults
 to the last 15 minutes and refreshes the log table every 10 seconds.
 

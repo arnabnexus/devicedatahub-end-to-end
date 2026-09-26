@@ -475,7 +475,7 @@ with an earlier password, sign in with that existing password and change it in
 Splunk Web; the persistent Splunk data volume can retain its previous password.
 
 The provisioned live pod-log dashboard is at
-`http://localhost:4000/app/device_datahub_monitor/pod_logs`. Choose a Kubernetes
+`http://localhost:4000/en-US/app/device_datahub_monitor/pod_logs`. Choose a Kubernetes
 pod or **All pods** from the pod filter. It defaults to the last 15 minutes and
 refreshes the log table every 10 seconds.
 
@@ -631,6 +631,28 @@ kubectl logs -n devicedatahub deploy/ai-flow-splunk --tail=100
 
 Confirm the Fluent Bit pod can reach the Splunk HEC service and that the
 namespace filter is `devicedatahub`. In Splunk, select the `main` index.
+
+### Splunk pod dashboard is unavailable
+
+Use the locale-prefixed dashboard URL:
+
+```text
+http://localhost:4000/en-US/app/device_datahub_monitor/pod_logs
+```
+
+Check that Splunk is ready and that the dashboard app was installed:
+
+```bash
+kubectl get pods -n devicedatahub -l app.kubernetes.io/name=ai-flow-splunk
+kubectl logs -n devicedatahub deploy/ai-flow-splunk --tail=150
+kubectl exec -n devicedatahub deploy/ai-flow-splunk -- \
+  ls -R /opt/splunk/etc/apps/device_datahub_monitor
+```
+
+If the app directory is missing, confirm the `ai-flow-splunk-dashboard`
+ConfigMap exists and upgrade/restart the Helm release. If the dashboard loads
+but shows no logs, first check that the pod filter is **All pods**, the time
+range includes recent data, and Fluent Bit is forwarding events to Splunk.
 
 ### Git clone fails
 

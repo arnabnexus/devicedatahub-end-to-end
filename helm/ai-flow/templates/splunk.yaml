@@ -37,6 +37,8 @@ spec:
       labels:
         app.kubernetes.io/name: {{ include "ai-flow.name" . }}-splunk
         app.kubernetes.io/instance: {{ .Release.Name }}
+      annotations:
+        checksum/dashboard: {{ printf "%s%s%s%s" (.Files.Get "files/splunk/app.conf") (.Files.Get "files/splunk/default.meta") (.Files.Get "files/splunk/default.xml") (.Files.Get "files/splunk/pod_logs.xml") | sha256sum }}
     spec:
       securityContext:
         fsGroup: 41812

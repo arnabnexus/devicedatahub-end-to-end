@@ -27,7 +27,7 @@
       <title>Live container logs</title>
       <table>
         <search>
-          <query>index=main kubernetes.namespace_name=devicedatahub kubernetes.pod_name="$pod_name$" | table _time kubernetes.pod_name kubernetes.container_name _raw | sort - _time</query>
+          <query>index=main kubernetes.namespace_name=devicedatahub kubernetes.pod_name=$pod_name$ | table _time kubernetes.pod_name kubernetes.container_name _raw | sort - _time</query>
           <earliest>$time_range.earliest$</earliest>
           <latest>$time_range.latest$</latest>
           <refresh>10s</refresh>
