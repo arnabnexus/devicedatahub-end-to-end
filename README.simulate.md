@@ -4,7 +4,7 @@ The simulation profile is opt-in. It starts Mosquitto inside Kubernetes and a
 `simulator.py` pod that publishes randomized normal and anomalous Wi-Fi payloads
 to the same topic consumed by `consumer.py`.
 
-Use `./scripts/start_linux.sh` from the repository root and answer `Yes` when asked to enable local simulation.
+Use `./scripts/start_cloud.sh` from the repository root and answer `Yes` when asked to enable local simulation.
 Answering `No` preserves the normal ngrok MQTT flow.
 
 Simulation resources:

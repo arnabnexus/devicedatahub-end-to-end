@@ -10,11 +10,11 @@ RUNTIME_DIR="$ROOT_DIR/.runtime"
 chmod 755 "$SCRIPT_DIR"/*.sh "$SCRIPT_DIR"/*.py
 
 log() {
-    printf '\n[start-linux] %s\n' "$*"
+    printf '\n[start-cloud] %s\n' "$*"
 }
 
 fail() {
-    printf '\n[start-linux] ERROR: %s\n' "$*" >&2
+    printf '\n[start-cloud] ERROR: %s\n' "$*" >&2
     exit 1
 }
 
@@ -94,9 +94,7 @@ fi
 
 # Activate the environment for the rest of this shell and all child commands.
 source "$VENV_DIR/bin/activate"
-log "Installing Python requirements"
-python -m pip install --upgrade pip
-python -m pip install -r "$ROOT_DIR/requirements.txt"
+log "Python dependencies are checked by scripts/startup.py and installed only when requirements.txt changes."
 
 SIMULATE=false
 if [[ -t 0 ]]; then
@@ -108,6 +106,9 @@ fi
 
 log "Starting the Kubernetes stack"
 startup_args=(scripts/startup.py)
+if [[ "${SKIP_IMAGE_BUILD:-false}" =~ ^([Tt][Rr][Uu][Ee]|1|[Yy]([Ee][Ss])?)$ ]]; then
+    startup_args+=(--no-build)
+fi
 if [[ "${ACCEPT_SPLUNK_TERMS:-false}" =~ ^([Tt][Rr][Uu][Ee]|1|[Yy]([Ee][Ss])?)$ ]]; then
     startup_args+=(--accept-splunk-terms)
 fi

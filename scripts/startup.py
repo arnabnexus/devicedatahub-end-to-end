@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
@@ -55,8 +56,15 @@ def ensure_venv() -> None:
     python = VENV / "bin" / "python"
     if not python.exists():
         run([sys.executable, "-m", "venv", str(VENV)])
-    run([str(python), "-m", "pip", "install", "--upgrade", "pip"])
-    run([str(python), "-m", "pip", "install", "-r", "requirements.txt"])
+    requirements = ROOT / "requirements.txt"
+    requirements_hash = hashlib.sha256(requirements.read_bytes()).hexdigest()
+    stamp = VENV / ".requirements.sha256"
+    if not stamp.exists() or stamp.read_text(encoding="utf-8").strip() != requirements_hash:
+        print("Installing Python requirements (manifest changed or environment is new).", flush=True)
+        run([str(python), "-m", "pip", "install", "-r", "requirements.txt"])
+        stamp.write_text(requirements_hash + "\n", encoding="utf-8")
+    else:
+        print("Python requirements unchanged; skipping dependency installation.", flush=True)
     print(f"Virtual environment ready: {VENV}", flush=True)
     print(f"Activate it in your shell with: source {VENV}/bin/activate", flush=True)
 
@@ -231,6 +239,14 @@ def main() -> int:
         if KIND_CLUSTER in output([tools["kind"], "get", "clusters"]).splitlines():
             run([tools["kind"], "delete", "cluster", "--name", KIND_CLUSTER])
         return 0
+
+    if args.no_build and subprocess.run(
+        [tools["docker"], "image", "inspect", IMAGE],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    ).returncode != 0:
+        raise SystemExit(f"Cannot use --no-build because local image {IMAGE} is missing. Run once without --no-build.")
 
     credentials_path = splunk_values_file(accept_terms=args.accept_splunk_terms)
     ensure_cluster(tools["kind"], tools["docker"])

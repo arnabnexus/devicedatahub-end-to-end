@@ -49,7 +49,8 @@ graph TD
 
 ## Startup sequence
 
-1. `scripts/start_linux.sh` creates and activates `.venv`.
+1. `scripts/start_cloud.sh` creates and activates `.venv`.
+    `requirements.txt` is installed only when its content changes.
 2. `scripts/startup.py` installs or locates `kind`, `kubectl`, and Helm.
 3. Docker builds the single application image.
 4. kind loads the image into cluster nodes.

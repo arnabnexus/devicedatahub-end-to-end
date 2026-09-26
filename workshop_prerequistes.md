@@ -7,7 +7,7 @@ At the end, you will be in a WSL terminal inside the repository and ready to
 run:
 
 ```bash
-./scripts/start_linux.sh
+./scripts/start_cloud.sh
 ```
 
 The flow starts an MQTT consumer, TimescaleDB, Grafana, Splunk log search,
@@ -309,14 +309,14 @@ because the repository root is the Docker build context.
 Run:
 
 ```bash
-chmod +x scripts/start_linux.sh
+chmod +x scripts/start_cloud.sh
 ```
 
 Confirm the script is executable:
 
 ```bash
-ls -l scripts/start_linux.sh
-bash -n scripts/start_linux.sh
+ls -l scripts/start_cloud.sh
+bash -n scripts/start_cloud.sh
 ```
 
 The mode should contain `x`, for example:
@@ -346,14 +346,14 @@ If the last command prints a commit hash, GitHub access is working.
 You are now in the repository and ready to run:
 
 ```bash
-./scripts/start_linux.sh
+./scripts/start_cloud.sh
 ```
 
 The launcher will:
 
 1. Pull the existing checkout with `git pull --ff-only` (the checkout may be located anywhere).
 2. Create and activate `.venv` inside the checkout.
-3. Install Python requirements.
+3. Install Python requirements only when the requirements manifest is new or has changed.
 4. Install Docker Engine inside Ubuntu if missing and start it if stopped.
 5. Download `kind`, `kubectl`, and Helm into `.local/bin` inside the checkout when needed.
 6. Ask whether to enable the local MQTT simulator.
@@ -370,7 +370,7 @@ On first startup, read the Splunk license and current General Terms at
 https://www.splunk.com/en_us/legal/splunk-general-terms.html. Normally the
 installer requires you to type `YES` to confirm acceptance. After reviewing and
 accepting the terms, automation can use
-`ACCEPT_SPLUNK_TERMS=true ./scripts/start_linux.sh` to skip the prompt; the
+`ACCEPT_SPLUNK_TERMS=true ./scripts/start_cloud.sh` to skip the prompt; the
 default remains interactive. Splunk login is username `admin`, password
 `admin123`. The HEC token is stored in `.runtime/splunk-values.json`; keep this
 file private.
@@ -424,6 +424,10 @@ The MQTT page shows direction, topic, delivery status, and payload for incoming
 telemetry and published anomaly/status events. The telemetry page shows recent
 device/radio measurements such as channel utilization, RSSI, client counts, and
 retry/failure counts.
+
+For a quicker rerun when application source has not changed and the local image
+already exists, run `SKIP_IMAGE_BUILD=true ./scripts/start_cloud.sh`. Use the
+normal command after source or Docker build-input changes so the image is rebuilt.
 
 ## 13. Verify after startup
 
@@ -565,7 +569,7 @@ run from a Git checkout; it never clones the repository.
 ```bash
 git status
 git pull --ff-only
-./scripts/start_linux.sh
+./scripts/start_cloud.sh
 ```
 
 ### Grafana shows no data

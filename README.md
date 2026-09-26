@@ -19,8 +19,8 @@ Open a terminal in any existing checkout of the repository and run:
 
 ```bash
 cd /path/to/devicedatahub-end-to-end
-chmod +x scripts/start_linux.sh
-./scripts/start_linux.sh
+chmod +x scripts/start_cloud.sh
+./scripts/start_cloud.sh
 ```
 
 The launcher finds the project root from its own location, runs
@@ -29,12 +29,12 @@ tools, and runtime files inside that checkout. The checkout can be located
 anywhere; the launcher does not clone the repository. For a first-time setup,
 clone the repository yourself, then run the commands above from that checkout.
 
-`scripts/start_linux.sh` performs the complete startup sequence:
+`scripts/start_cloud.sh` performs the complete startup sequence:
 
 1. Installs Docker Engine inside Ubuntu if missing and starts it when stopped.
 2. Creates `.venv` if it does not exist.
 3. Activates the virtual environment.
-4. Installs `requirements.txt`.
+4. Installs `requirements.txt` only when it is new or has changed since the previous launch.
 5. Asks whether to enable the local MQTT simulator.
 6. Runs `scripts/startup.py` with `values.simulate.yaml` only when enabled.
 7. Creates or reuses the `devicedatahub` kind cluster.
@@ -49,7 +49,7 @@ clone the repository yourself, then run the commands above from that checkout.
 On first startup, review and explicitly accept the Splunk license and current
 General Terms when prompted. After reviewing and accepting them, you can skip
 the prompt in an automated run with
-`ACCEPT_SPLUNK_TERMS=true ./scripts/start_linux.sh`. This is an explicit opt-in;
+`ACCEPT_SPLUNK_TERMS=true ./scripts/start_cloud.sh`. This is an explicit opt-in;
 the default remains interactive. Splunk signs in with username `admin` and
 password `admin123`. The HEC token is generated and credentials are stored in
 `.runtime/splunk-values.json` with owner-only permissions. Keep this file
@@ -60,6 +60,15 @@ Splunk Web is forwarded from local port `4000` to container port `8000`; sign in
 as `admin` with password `admin123`.
 The Splunk Enterprise image is resource intensive; a 16 GB RAM laptop and at
 least 30 GB free disk space are recommended.
+The first startup can take several minutes while large container images are
+downloaded and Splunk initializes. Repeat starts skip Python dependency
+installation when `requirements.txt` is unchanged; Helm still waits for all
+workloads to become ready.
+
+For a quicker rerun when application source has not changed and the local image
+already exists, use `SKIP_IMAGE_BUILD=true ./scripts/start_cloud.sh`. Do not use
+this after changing application source or the Docker build inputs; a normal run
+rebuilds the image.
 `admin123` is a weak workshop password; use it only for a local, trusted
 development environment and do not expose Splunk outside the laptop. If Splunk
 was already initialized with the previous generated password, changing the
@@ -335,7 +344,7 @@ python3 scripts/shutdown.py --keep-venv
 - [config](config): environment and simulator broker configuration
 - [data/train_1000.json](data/train_1000.json): canonical training dataset
 - [model_artifacts](model_artifacts): trained model storage
-- [scripts/start_linux.sh](scripts/start_linux.sh): Linux/WSL startup and port forwarding
+- [scripts/start_cloud.sh](scripts/start_cloud.sh): Linux/WSL startup and port forwarding
 - [scripts/startup.py](scripts/startup.py): kind, kubectl, Helm, image, and deployment bootstrap
 - [scripts/shutdown.py](scripts/shutdown.py): process, Kubernetes, and local cleanup
 - [helm/ai-flow](helm/ai-flow): complete Kubernetes chart

@@ -30,7 +30,7 @@ context over MQTT.
 
 | ID | Requirement | Acceptance criteria |
 | --- | --- | --- |
-| NFR-01 | Reproducible startup | `./scripts/start_linux.sh` creates the venv, installs requirements, builds the image, deploys Helm, and starts forwarding. |
+| NFR-01 | Reproducible startup | `./scripts/start_cloud.sh` creates the venv, installs requirements, builds the image, deploys Helm, and starts forwarding. |
 | NFR-02 | Kubernetes-only application runtime | Consumer, database, Grafana, training init, and inference run as Kubernetes workloads. |
 | NFR-03 | Resilient database startup | Database readiness probes, wait init containers, and inference connection retries handle PostgreSQL startup delays. |
 | NFR-04 | Observable operation | Pod status, consumer logs, training logs, inference logs, and port-forward logs are available through documented commands and Splunk searches. |
@@ -103,7 +103,7 @@ wifi/alerts/summary
 
 ## 6. Validation checklist
 
-- `bash -n scripts/start_linux.sh` passes.
+- `bash -n scripts/start_cloud.sh` passes.
 - `python3 -m py_compile scripts/startup.py scripts/shutdown.py` passes.
 - `helm lint helm/ai-flow` passes.
 - `helm template ai-flow helm/ai-flow` renders successfully.
