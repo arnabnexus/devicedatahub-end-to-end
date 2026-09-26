@@ -23,7 +23,8 @@ IMAGE = "devicedatahub-ai-flow:latest"
 
 
 def command_path(name: str) -> str | None:
-    return shutil.which(name) or (str(LOCAL_BIN / name) if (LOCAL_BIN / name).exists() else None)
+    local_path = LOCAL_BIN / name
+    return str(local_path) if local_path.exists() else shutil.which(name)
 
 
 def run(
@@ -127,10 +128,15 @@ def install_stack(tools: dict[str, str], *, rebuild: bool, values_file: str | No
     kind_tmp.mkdir(parents=True, exist_ok=True)
     kind_env = os.environ.copy()
     kind_env["TMPDIR"] = str(kind_tmp)
-    run(
-        [tools["kind"], "load", "docker-image", IMAGE, "--name", KIND_CLUSTER],
-        env=kind_env,
-    )
+    image_archive = kind_tmp / "devicedatahub-ai-flow.tar"
+    try:
+        run([tools["docker"], "save", "--output", str(image_archive), IMAGE])
+        run(
+            [tools["kind"], "load", "image-archive", str(image_archive), "--name", KIND_CLUSTER],
+            env=kind_env,
+        )
+    finally:
+        image_archive.unlink(missing_ok=True)
     namespace_yaml = subprocess.check_output(
         [tools["kubectl"], "create", "namespace", NAMESPACE, "--dry-run=client", "-o", "yaml"],
         cwd=ROOT,
