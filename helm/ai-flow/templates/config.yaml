@@ -11,6 +11,26 @@ stringData:
   MQTT_PASSWORD: {{ .Values.mqtt.password | quote }}
   ALERT_MQTT_USERNAME: {{ .Values.alerts.username | quote }}
   ALERT_MQTT_PASSWORD: {{ .Values.alerts.password | quote }}
+  SPLUNK_ADMIN_PASSWORD: {{ .Values.splunk.adminPassword | quote }}
+  SPLUNK_HEC_TOKEN: {{ .Values.splunk.hecToken | quote }}
+{{- if .Values.splunk.enabled }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "ai-flow.fullname" . }}-splunk-defaults
+  labels:
+    {{- include "ai-flow.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  default.yml: |
+    splunk:
+      hec:
+        enable: true
+        ssl: false
+        port: 8088
+        token: {{ .Values.splunk.hecToken | quote }}
+{{- end }}
 ---
 apiVersion: v1
 kind: ConfigMap

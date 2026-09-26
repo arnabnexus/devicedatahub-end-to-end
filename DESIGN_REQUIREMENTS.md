@@ -3,8 +3,9 @@
 ## 1. Purpose
 
 Provide an end-to-end Wi-Fi telemetry and anomaly-detection system that can be
-started on a Linux workstation, run entirely in Kubernetes pods, expose a
-Grafana dashboard, and publish actionable anomaly context over MQTT.
+started on a Linux workstation, run entirely in Kubernetes pods, expose
+Grafana and Splunk interfaces, collect pod logs, and publish actionable anomaly
+context over MQTT.
 
 ## 2. Functional requirements
 
@@ -18,8 +19,10 @@ Grafana dashboard, and publish actionable anomaly context over MQTT.
 | FR-06 | Explain anomalies | Every published anomaly contains a reason code, scenario, plain-language explanation, and recommended action. |
 | FR-07 | Publish alerts | Anomaly, status, and summary payloads are published to the configured MQTT topics. |
 | FR-08 | Provision Grafana | Grafana starts with the TimescaleDB datasource and dashboard JSON imported automatically. |
-| FR-09 | Expose local access | Linux startup forwards Grafana to `localhost:3000` and TimescaleDB to `localhost:5433`. |
+| FR-09 | Expose local access | Linux startup forwards Grafana to `localhost:3000`, TimescaleDB to `localhost:5433`, and Splunk Web to `localhost:4000`. |
 | FR-10 | Clean up | `scripts/shutdown.py` stops port-forwards and removes the Helm release, namespace, kind cluster, image, and venv by default. |
+| FR-11 | Collect Kubernetes logs | Fluent Bit forwards application pod logs in `devicedatahub` to Splunk HEC with namespace, pod, and container metadata, including simulator pods; it excludes Splunk and itself to avoid feedback. |
+| FR-12 | Expose Splunk search | Linux startup forwards Splunk Web to `http://localhost:4000`; events are searchable in the `main` index. |
 
 ## 3. Non-functional requirements
 
@@ -28,8 +31,8 @@ Grafana dashboard, and publish actionable anomaly context over MQTT.
 | NFR-01 | Reproducible startup | `./scripts/start_linux.sh` creates the venv, installs requirements, builds the image, deploys Helm, and starts forwarding. |
 | NFR-02 | Kubernetes-only application runtime | Consumer, database, Grafana, training init, and inference run as Kubernetes workloads. |
 | NFR-03 | Resilient database startup | Database readiness probes, wait init containers, and inference connection retries handle PostgreSQL startup delays. |
-| NFR-04 | Observable operation | Pod status, consumer logs, training logs, inference logs, and port-forward logs are available through documented commands. |
-| NFR-05 | Credential hygiene | Real credentials are supplied through environment or private Helm values and are not committed. |
+| NFR-04 | Observable operation | Pod status, consumer logs, training logs, inference logs, and port-forward logs are available through documented commands and Splunk searches. |
+| NFR-05 | Credential hygiene | Splunk terms are explicitly accepted; generated Splunk credentials are owner-only local values and are not committed. |
 | NFR-06 | Single source of truth | Root Docker build files, `src/`, `config/`, `scripts/`, Helm chart, training dataset, and lifecycle scripts define the supported flow. |
 
 ## 4. Operational interfaces
@@ -51,6 +54,16 @@ Database: telemetry
 User: postgres
 Password: postgres by default
 Table: public.telemetry
+```
+
+### Splunk
+
+```text
+URL: http://localhost:4000
+Username: admin
+Password: generated in .runtime/splunk-values.json
+Index: main
+Example search: index=main kubernetes.namespace_name=devicedatahub
 ```
 
 ### MQTT output
@@ -84,4 +97,6 @@ wifi/alerts/summary
 - Training logs show `model.pkl` saved.
 - Inference logs show database and MQTT connections.
 - Grafana loads the dashboard and displays telemetry after selecting a recent time range.
+- Fluent Bit becomes ready and Splunk searches return events with pod/container metadata.
+- Normal MQTT and simulator deployments both send logs to Splunk.
 - `python3 scripts/shutdown.py` removes runtime resources after validation.

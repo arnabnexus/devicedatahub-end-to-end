@@ -10,8 +10,8 @@ run:
 ./scripts/start_linux.sh
 ```
 
-The flow starts an MQTT consumer, TimescaleDB, Grafana, model training,
-inference, and optional local MQTT simulation.
+The flow starts an MQTT consumer, TimescaleDB, Grafana, Splunk log search,
+model training, inference, and optional local MQTT simulation.
 
 ## 1. Hardware and Windows prerequisites
 
@@ -19,8 +19,8 @@ inference, and optional local MQTT simulation.
 
 - 64-bit Windows 10 version 2004 or newer, or Windows 11
 - CPU virtualization support: Intel VT-x or AMD-V
-- At least 8 GB RAM; 16 GB is recommended
-- At least 20 GB free disk space
+- At least 16 GB RAM recommended for Splunk Enterprise and the Kubernetes workloads
+- At least 30 GB free disk space recommended
 - Administrator access to Windows
 - Internet access for Windows features, Ubuntu packages, GitHub, and Kubernetes images
 
@@ -360,9 +360,16 @@ The launcher will:
 8. Build and load the application image.
 9. Deploy the Helm release.
 10. Train the model in the inference init container.
-11. Start the consumer, inference, TimescaleDB, and Grafana workloads.
-12. Start local port-forwards.
-13. Print Kubernetes log commands for inspecting or following workload logs.
+11. Start Splunk Enterprise and a Fluent Bit DaemonSet that forwards logs from the `devicedatahub` namespace.
+12. Start the consumer, inference, TimescaleDB, and Grafana workloads.
+13. Start local port-forwards, including Splunk Web on port `4000`.
+14. Print Kubernetes log commands for inspecting or following workload logs.
+
+On first startup, read the Splunk license and current General Terms at
+https://www.splunk.com/en_us/legal/splunk-general-terms.html. The installer
+requires you to type `YES` to confirm acceptance. It generates a local admin
+password and HEC token in `.runtime/splunk-values.json`; keep this file private
+and retrieve the admin password from it for Splunk login.
 
 At the simulator prompt:
 
@@ -389,6 +396,15 @@ User: postgres
 Password: postgres
 ```
 
+Splunk Web is available at `http://localhost:4000` with username `admin` and
+the generated password stored in `.runtime/splunk-values.json`.
+
+Retrieve the password from the repository root with:
+
+```bash
+python3 -c 'import json; print(json.load(open(".runtime/splunk-values.json"))["splunk"]["adminPassword"])'
+```
+
 ## 13. Verify after startup
 
 In another WSL terminal:
@@ -401,6 +417,19 @@ kubectl get pods -n devicedatahub -o wide
 kubectl get services -n devicedatahub
 kubectl logs -n devicedatahub deploy/ai-flow-consumer --tail=50
 kubectl logs -n devicedatahub deploy/ai-flow-inference -c inference --tail=50
+kubectl logs -n devicedatahub daemonset/ai-flow-fluent-bit --tail=50
+```
+
+In Splunk Search & Reporting, search all project pod logs with:
+
+```spl
+index=main kubernetes.namespace_name=devicedatahub
+```
+
+Filter to inference or simulator pods with `kubernetes.pod_name`, for example:
+
+```spl
+index=main kubernetes.namespace_name=devicedatahub kubernetes.pod_name=ai-flow-inference*
 ```
 
 Expected pod state:
@@ -473,6 +502,19 @@ Check the service and daemon log:
 sudo systemctl status docker --no-pager
 cat /tmp/devicedatahub-dockerd.log
 ```
+
+### Splunk has no events
+
+Check Fluent Bit and Splunk pod status/logs:
+
+```bash
+kubectl get pods -n devicedatahub -o wide
+kubectl logs -n devicedatahub daemonset/ai-flow-fluent-bit --tail=100
+kubectl logs -n devicedatahub deploy/ai-flow-splunk --tail=100
+```
+
+Confirm the Fluent Bit pod can reach the Splunk HEC service and that the
+namespace filter is `devicedatahub`. In Splunk, select the `main` index.
 
 ### Git clone fails
 

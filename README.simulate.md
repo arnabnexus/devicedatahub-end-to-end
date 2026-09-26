@@ -30,6 +30,21 @@ wifi/alerts/{device_id}/status
 wifi/alerts/summary
 ```
 
+The same Fluent Bit DaemonSet collects broker, simulator, consumer, inference,
+and other application workload logs in the `devicedatahub` namespace and forwards
+them to Splunk. Splunk and Fluent Bit logs are excluded to prevent a feedback
+loop. Search in Splunk Web at `http://localhost:4000` with:
+
+```spl
+index=main kubernetes.namespace_name=devicedatahub
+```
+
+To isolate simulated publisher logs, filter by pod:
+
+```spl
+index=main kubernetes.namespace_name=devicedatahub kubernetes.pod_name=ai-flow-simulator*
+```
+
 Override simulator settings in `helm/ai-flow/values.simulate.yaml`:
 
 ```yaml

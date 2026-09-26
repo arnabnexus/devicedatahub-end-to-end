@@ -8,6 +8,7 @@ MQTT over ngrok -> consumer -> TimescaleDB -> Grafana
                          train_1000.json -> train.py -> model.pkl
                                                         |
                                       inference.py -> MQTT alerts
+Kubernetes pod logs -> Fluent Bit -> Splunk HEC -> Splunk Web
 ```
 
 ## Start On Linux
@@ -38,14 +39,22 @@ clone the repository yourself, then run the commands above from that checkout.
 8. Builds `devicedatahub-ai-flow:latest`.
 9. Loads the image into the kind nodes.
 10. Installs or upgrades the `helm/ai-flow` chart.
-11. Starts TimescaleDB, Grafana, the MQTT consumer, and inference pods.
+11. Starts TimescaleDB, Grafana, Splunk, Fluent Bit, the MQTT consumer, and inference pods.
 12. Trains the model from `data/train_1000.json` in the inference pod init container.
 13. Starts `inference.py` only after training and database readiness succeed.
-14. Starts Grafana and TimescaleDB port-forward processes.
+14. Starts Grafana, TimescaleDB, and Splunk port-forward processes.
 
-The launcher prints the Grafana URL and `kubectl logs` commands for all
-components and key workloads. It does not stream logs automatically; run a
-printed command in a terminal when you want to inspect or follow logs.
+On first startup, review and explicitly accept the Splunk license and current
+General Terms when prompted. The script generates a random Splunk admin password
+and HEC token and stores them in `.runtime/splunk-values.json` with owner-only
+permissions. Keep this file private; it is ignored by Git and reused for later
+Helm upgrades.
+
+The launcher prints the Grafana and Splunk URLs, plus `kubectl logs` commands.
+Splunk Web is forwarded from local port `4000` to container port `8000`; sign in
+as `admin` and retrieve the generated password from `.runtime/splunk-values.json`.
+The Splunk Enterprise image is resource intensive; a 16 GB RAM laptop and at
+least 30 GB free disk space are recommended.
 
 GitHub CLI is not required for this public HTTPS repository. Git can pull it
 without `gh auth login`.
@@ -59,6 +68,22 @@ Kubernetes workloads. The simulator publishes randomized normal and anomaly
 telemetry to the same topic consumed by the existing consumer. Answer `No` to
 keep the ngrok MQTT flow unchanged. See [README.simulate.md](README.simulate.md)
 for simulator settings.
+
+Fluent Bit collects application pod logs from the `devicedatahub` namespace in
+both MQTT modes. Splunk and Fluent Bit logs are excluded to prevent a feedback
+loop. In Splunk Search & Reporting, select the `main` index and search:
+
+```spl
+index=main kubernetes.namespace_name=devicedatahub
+```
+
+Filter to inference pod events with:
+
+```spl
+index=main kubernetes.namespace_name=devicedatahub kubernetes.pod_name=ai-flow-inference*
+```
+
+Events include `kubernetes.pod_name` and `kubernetes.container_name` fields.
 
 ## Grafana And Database Access
 
@@ -104,6 +129,21 @@ Keep each command running in its own terminal. In VS Code, configure a
 PostgreSQL/TimescaleDB extension with host `localhost`, port `5433`, database
 `telemetry`, user `postgres`, and password `postgres`.
 
+Splunk Web is available at `http://localhost:4000`. Use username `admin` and
+the generated password in `.runtime/splunk-values.json`.
+
+To retrieve that password in the repository checkout:
+
+```bash
+python3 -c 'import json; print(json.load(open(".runtime/splunk-values.json"))["splunk"]["adminPassword"])'
+```
+
+The manual Splunk Web forward is:
+
+```bash
+kubectl port-forward service/ai-flow-splunk 4000:8000 --namespace=devicedatahub
+```
+
 ## Verify The Pods
 
 Use the namespace explicitly:
@@ -119,6 +159,7 @@ Follow the consumer and inference logs:
 kubectl logs -n devicedatahub deploy/ai-flow-consumer -f
 kubectl logs -n devicedatahub deploy/ai-flow-inference -c inference -f
 kubectl logs -n devicedatahub deploy/ai-flow-inference -c train-model --tail=200
+kubectl logs -n devicedatahub daemonset/ai-flow-fluent-bit -f
 ```
 
 The expected flow is:
@@ -186,15 +227,26 @@ database:
   name: telemetry
   user: postgres
   password: postgres
+splunk:
+  enabled: true
+  storage: 10Gi
 ```
 
 ## Manual Kubernetes Commands
+
+The startup script generates private Splunk password and HEC token values after
+explicit terms acceptance. For manual Helm deployment, provide a private values
+file with `splunk.acceptLicense: true`, `splunk.adminPassword`, and
+`splunk.hecToken`; do not commit that file.
 
 Build and load the image:
 
 ```bash
 docker build -t devicedatahub-ai-flow:latest .
-kind load docker-image devicedatahub-ai-flow:latest --name devicedatahub
+mkdir -p .runtime/kind-tmp
+docker save --output .runtime/kind-tmp/devicedatahub-ai-flow.tar devicedatahub-ai-flow:latest
+kind load image-archive .runtime/kind-tmp/devicedatahub-ai-flow.tar --name devicedatahub
+rm .runtime/kind-tmp/devicedatahub-ai-flow.tar
 ```
 
 Deploy the chart:
@@ -205,8 +257,9 @@ helm upgrade --install ai-flow helm/ai-flow \
   --create-namespace \
   --set image.repository=devicedatahub-ai-flow \
   --set image.tag=latest \
+  --values .runtime/splunk-values.json \
   --wait \
-  --timeout 10m
+  --timeout 20m
 ```
 
 ## Shutdown

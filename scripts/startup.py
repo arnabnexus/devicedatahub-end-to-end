@@ -4,13 +4,16 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
+import secrets
 import shutil
 import stat
 import subprocess
 import sys
 import tarfile
 import urllib.request
+import uuid
 from pathlib import Path
 
 
@@ -121,7 +124,13 @@ def ensure_cluster(kind: str, docker: str) -> None:
         print(f"Using existing kind cluster: {KIND_CLUSTER}", flush=True)
 
 
-def install_stack(tools: dict[str, str], *, rebuild: bool, values_file: str | None) -> None:
+def install_stack(
+    tools: dict[str, str],
+    *,
+    rebuild: bool,
+    values_file: str | None,
+    splunk_values: Path,
+) -> None:
     if rebuild:
         run([tools["docker"], "build", "-t", IMAGE, "."])
     kind_tmp = ROOT / ".runtime" / "kind-tmp"
@@ -157,11 +166,45 @@ def install_stack(tools: dict[str, str], *, rebuild: bool, values_file: str | No
         "image.tag=latest",
         "--wait",
         "--timeout",
-        "10m",
+        "20m",
     ]
     if values_file:
         command.extend(["--values", values_file])
+    command.extend(["--values", str(splunk_values)])
     run(command)
+
+
+def splunk_values_file() -> Path:
+    values_path = ROOT / ".runtime" / "splunk-values.json"
+    values_path.parent.mkdir(parents=True, exist_ok=True)
+    if values_path.exists():
+        values = json.loads(values_path.read_text(encoding="utf-8"))
+        splunk = values.get("splunk", {})
+        if splunk.get("acceptLicense") is True and splunk.get("adminPassword") and splunk.get("hecToken"):
+            return values_path
+        raise SystemExit(f"Incomplete Splunk credentials file: {values_path}")
+
+    print(
+        "Splunk Enterprise requires accepting its license and current General Terms. "
+        "Review https://www.splunk.com/en_us/legal/splunk-general-terms.html before continuing.",
+        flush=True,
+    )
+    if not sys.stdin.isatty() or input("Type YES to accept Splunk terms and continue: ").strip() != "YES":
+        raise SystemExit("Splunk terms were not accepted; startup cancelled.")
+
+    values = {
+        "splunk": {
+            "acceptLicense": True,
+            "adminPassword": secrets.token_urlsafe(24),
+            "hecToken": str(uuid.uuid4()),
+        }
+    }
+    descriptor = os.open(values_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as credentials_file:
+        json.dump(values, credentials_file, indent=2)
+        credentials_file.write("\n")
+    print(f"Generated local Splunk credentials in {values_path} (permissions 600).", flush=True)
+    return values_path
 
 
 def show_logs(kubectl: str) -> None:
@@ -182,8 +225,14 @@ def main() -> int:
             run([tools["kind"], "delete", "cluster", "--name", KIND_CLUSTER])
         return 0
 
+    credentials_path = splunk_values_file()
     ensure_cluster(tools["kind"], tools["docker"])
-    install_stack(tools, rebuild=not args.no_build, values_file=args.values)
+    install_stack(
+        tools,
+        rebuild=not args.no_build,
+        values_file=args.values,
+        splunk_values=credentials_path,
+    )
     show_logs(tools["kubectl"])
     return 0
 

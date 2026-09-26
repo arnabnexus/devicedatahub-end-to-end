@@ -26,3 +26,4 @@ logs/
 # Local Kubernetes binaries
 kind
 kubectl
+.local/

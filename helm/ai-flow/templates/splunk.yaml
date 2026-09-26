@@ -1,0 +1,87 @@
+{{- if .Values.splunk.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-flow.fullname" . }}-splunk
+  labels:
+    {{- include "ai-flow.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: web
+      port: 8000
+      targetPort: web
+    - name: hec
+      port: 8088
+      targetPort: hec
+  selector:
+    app.kubernetes.io/name: {{ include "ai-flow.name" . }}-splunk
+    app.kubernetes.io/instance: {{ .Release.Name }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-flow.fullname" . }}-splunk
+  labels:
+    {{- include "ai-flow.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "ai-flow.name" . }}-splunk
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "ai-flow.name" . }}-splunk
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      securityContext:
+        fsGroup: 41812
+      containers:
+        - name: splunk
+          image: {{ .Values.splunk.image | quote }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: web
+              containerPort: 8000
+            - name: hec
+              containerPort: 8088
+          env:
+            - name: SPLUNK_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ai-flow.fullname" . }}-credentials
+                  key: SPLUNK_ADMIN_PASSWORD
+            - name: SPLUNK_START_ARGS
+              value: {{ if .Values.splunk.acceptLicense }}"--accept-license"{{ else }}""{{ end }}
+            - name: SPLUNK_GENERAL_TERMS
+              value: {{ if .Values.splunk.acceptLicense }}"--accept-sgt-current-at-splunk-com"{{ else }}""{{ end }}
+          startupProbe:
+            tcpSocket:
+              port: web
+            periodSeconds: 10
+            failureThreshold: 60
+          readinessProbe:
+            tcpSocket:
+              port: web
+            periodSeconds: 10
+            failureThreshold: 6
+          volumeMounts:
+            - name: splunk-data
+              mountPath: /opt/splunk/var
+            - name: splunk-defaults
+              mountPath: /tmp/defaults
+              readOnly: true
+          resources:
+            {{- toYaml .Values.splunk.resources | nindent 12 }}
+      volumes:
+        - name: splunk-data
+          persistentVolumeClaim:
+            claimName: {{ include "ai-flow.fullname" . }}-splunk
+        - name: splunk-defaults
+          secret:
+            secretName: {{ include "ai-flow.fullname" . }}-splunk-defaults
+{{- end }}

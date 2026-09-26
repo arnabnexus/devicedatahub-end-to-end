@@ -55,6 +55,26 @@ grafana:
     port: 3000
     nodePort: 30300
 
+splunk:
+  enabled: true
+  image: splunk/splunk:10.4.3
+  acceptLicense: false
+  adminPassword: ""
+  hecToken: ""
+  storage: 10Gi
+  storageClassName: ""
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      cpu: 2
+      memory: 4Gi
+
+logForwarder:
+  enabled: true
+  image: fluent/fluent-bit:3.2.10
+
 training:
   enabled: true
   dataPath: data/train_1000.json

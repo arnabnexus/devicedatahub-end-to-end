@@ -125,20 +125,23 @@ fi
 log "Waiting for Kubernetes Services"
 for attempt in $(seq 1 30); do
     if "$KUBECTL" get service ai-flow-grafana -n "$NAMESPACE" >/dev/null 2>&1 \
-        && "$KUBECTL" get service ai-flow-timescaledb -n "$NAMESPACE" >/dev/null 2>&1; then
+        && "$KUBECTL" get service ai-flow-timescaledb -n "$NAMESPACE" >/dev/null 2>&1 \
+        && "$KUBECTL" get service ai-flow-splunk -n "$NAMESPACE" >/dev/null 2>&1; then
         break
     fi
     if [[ "$attempt" == 30 ]]; then
-        fail "Grafana or TimescaleDB Service did not become available."
+        fail "Grafana, TimescaleDB, or Splunk Service did not become available."
     fi
     sleep 2
 done
 
 run_forward() {
     local title="$1"
-    local resource="$2"
-    local ports="$3"
-    local command="cd $(printf '%q' "$ROOT_DIR") && echo 'Forwarding $resource $ports' && '$KUBECTL' port-forward '$resource' '$ports' --namespace='$NAMESPACE'"
+    local name="$2"
+    local resource="$3"
+    local ports="$4"
+    local pid_file="$RUNTIME_DIR/$name.port-forward.pid"
+    local command="cd $(printf '%q' "$ROOT_DIR") && echo 'Forwarding $resource $ports' && bash $(printf '%q' "$SCRIPT_DIR/port_forward.sh") $(printf '%q' "$pid_file") $(printf '%q' "$KUBECTL") port-forward $(printf '%q' "$resource") $(printf '%q' "$ports") --namespace=$(printf '%q' "$NAMESPACE")"
 
     if command -v gnome-terminal >/dev/null 2>&1; then
         gnome-terminal --title="$title" -- bash -lc "$command; exec bash" &
@@ -158,10 +161,10 @@ start_background_forward() {
     local resource="$2"
     local ports="$3"
     mkdir -p "$RUNTIME_DIR"
-    nohup "$KUBECTL" port-forward "$resource" "$ports" --namespace="$NAMESPACE" \
+    nohup bash "$SCRIPT_DIR/port_forward.sh" "$RUNTIME_DIR/$name.port-forward.pid" \
+        "$KUBECTL" port-forward "$resource" "$ports" --namespace="$NAMESPACE" \
         >"$RUNTIME_DIR/$name.port-forward.log" 2>&1 < /dev/null &
     local pid=$!
-    printf '%s\n' "$pid" >"$RUNTIME_DIR/$name.port-forward.pid"
     log "$name port-forward started in background (PID $pid)"
 }
 
@@ -173,32 +176,52 @@ print_followup_commands() {
     printf '  kubectl get services -n devicedatahub\n'
     printf '  kubectl logs -n devicedatahub deploy/ai-flow-consumer --tail=50 -f\n'
     printf '  kubectl logs -n devicedatahub deploy/ai-flow-inference -c inference --tail=50 -f\n'
+    printf '  kubectl logs -n devicedatahub deploy/ai-flow-splunk --tail=50 -f\n'
+    printf '  kubectl logs -n devicedatahub daemonset/ai-flow-fluent-bit --tail=50 -f\n'
+    printf '  Splunk search: index=main kubernetes.namespace_name=devicedatahub\n'
     printf '  python3 scripts/shutdown.py\n'
 }
 
-if ! run_forward "DeviceDataHub Grafana" "service/ai-flow-grafana" "3000:3000"; then
+if ! run_forward "DeviceDataHub Grafana" "grafana" "service/ai-flow-grafana" "3000:3000"; then
     log "No graphical terminal emulator found; starting detached port-forwards."
     start_background_forward "grafana" "service/ai-flow-grafana" "3000:3000"
     start_background_forward "timescaledb" "service/ai-flow-timescaledb" "5433:5432"
+    start_background_forward "splunk" "service/ai-flow-splunk" "4000:8000"
     log "Grafana: http://localhost:3000"
     log "Grafana log: $RUNTIME_DIR/grafana.port-forward.log"
     log "TimescaleDB: localhost:5433"
     log "TimescaleDB log: $RUNTIME_DIR/timescaledb.port-forward.log"
     log "Grafana URL: http://localhost:3000"
+    log "Splunk URL: http://localhost:4000"
+    log "Splunk username: admin"
+    log "Splunk credentials: $RUNTIME_DIR/splunk-values.json"
     print_followup_commands
     exit 0
 fi
 
-if ! run_forward "DeviceDataHub TimescaleDB" "service/ai-flow-timescaledb" "5433:5432"; then
+if ! run_forward "DeviceDataHub TimescaleDB" "timescaledb" "service/ai-flow-timescaledb" "5433:5432"; then
     log "Grafana terminal opened, but no second terminal emulator was available."
     start_background_forward "timescaledb" "service/ai-flow-timescaledb" "5433:5432"
     log "Grafana URL: http://localhost:3000"
+    if ! run_forward "DeviceDataHub Splunk" "splunk" "service/ai-flow-splunk" "4000:8000"; then
+        start_background_forward "splunk" "service/ai-flow-splunk" "4000:8000"
+    fi
+    log "Splunk URL: http://localhost:4000"
+    log "Splunk username: admin"
+    log "Splunk credentials: $RUNTIME_DIR/splunk-values.json"
     print_followup_commands
     exit 0
+fi
+
+if ! run_forward "DeviceDataHub Splunk" "splunk" "service/ai-flow-splunk" "4000:8000"; then
+    log "Splunk terminal could not be opened; starting the port-forward in the background."
+    start_background_forward "splunk" "service/ai-flow-splunk" "4000:8000"
 fi
 
 log "Child terminals started"
 log "Grafana: http://localhost:3000"
 log "TimescaleDB: localhost:5433, database telemetry"
+log "Splunk: http://localhost:4000 (username: admin)"
+log "Splunk credentials: $RUNTIME_DIR/splunk-values.json"
 log "Keep both child terminals open while using Grafana or the database."
 print_followup_commands
