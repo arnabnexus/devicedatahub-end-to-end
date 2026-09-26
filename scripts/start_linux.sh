@@ -108,6 +108,9 @@ fi
 
 log "Starting the Kubernetes stack"
 startup_args=(scripts/startup.py)
+if [[ "${ACCEPT_SPLUNK_TERMS:-false}" =~ ^([Tt][Rr][Uu][Ee]|1|[Yy]([Ee][Ss])?)$ ]]; then
+    startup_args+=(--accept-splunk-terms)
+fi
 if [[ "$SIMULATE" == true ]]; then
     log "Simulation enabled: using helm/ai-flow/values.simulate.yaml"
     startup_args+=(--values helm/ai-flow/values.simulate.yaml)

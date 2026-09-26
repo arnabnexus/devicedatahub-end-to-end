@@ -45,10 +45,13 @@ clone the repository yourself, then run the commands above from that checkout.
 14. Starts Grafana, TimescaleDB, and Splunk port-forward processes.
 
 On first startup, review and explicitly accept the Splunk license and current
-General Terms when prompted. The script generates a random Splunk admin password
-and HEC token and stores them in `.runtime/splunk-values.json` with owner-only
-permissions. Keep this file private; it is ignored by Git and reused for later
-Helm upgrades.
+General Terms when prompted. After reviewing and accepting them, you can skip
+the prompt in an automated run with
+`ACCEPT_SPLUNK_TERMS=true ./scripts/start_linux.sh`. This is an explicit opt-in;
+the default remains interactive. The script generates a random Splunk admin
+password and HEC token and stores them in `.runtime/splunk-values.json` with
+owner-only permissions. Keep this file private; it is ignored by Git and reused
+for later Helm upgrades.
 
 The launcher prints the Grafana and Splunk URLs, plus `kubectl logs` commands.
 Splunk Web is forwarded from local port `4000` to container port `8000`; sign in

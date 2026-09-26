@@ -366,10 +366,13 @@ The launcher will:
 14. Print Kubernetes log commands for inspecting or following workload logs.
 
 On first startup, read the Splunk license and current General Terms at
-https://www.splunk.com/en_us/legal/splunk-general-terms.html. The installer
-requires you to type `YES` to confirm acceptance. It generates a local admin
-password and HEC token in `.runtime/splunk-values.json`; keep this file private
-and retrieve the admin password from it for Splunk login.
+https://www.splunk.com/en_us/legal/splunk-general-terms.html. Normally the
+installer requires you to type `YES` to confirm acceptance. After reviewing and
+accepting the terms, automation can use
+`ACCEPT_SPLUNK_TERMS=true ./scripts/start_linux.sh` to skip the prompt; the
+default remains interactive. Startup generates a local admin password and HEC
+token in `.runtime/splunk-values.json`; keep this file private and retrieve the
+admin password from it for Splunk login.
 
 At the simulator prompt:
 

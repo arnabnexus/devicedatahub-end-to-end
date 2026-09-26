@@ -174,7 +174,7 @@ def install_stack(
     run(command)
 
 
-def splunk_values_file() -> Path:
+def splunk_values_file(*, accept_terms: bool = False) -> Path:
     values_path = ROOT / ".runtime" / "splunk-values.json"
     values_path.parent.mkdir(parents=True, exist_ok=True)
     if values_path.exists():
@@ -184,13 +184,16 @@ def splunk_values_file() -> Path:
             return values_path
         raise SystemExit(f"Incomplete Splunk credentials file: {values_path}")
 
-    print(
-        "Splunk Enterprise requires accepting its license and current General Terms. "
-        "Review https://www.splunk.com/en_us/legal/splunk-general-terms.html before continuing.",
-        flush=True,
-    )
-    if not sys.stdin.isatty() or input("Type YES to accept Splunk terms and continue: ").strip() != "YES":
-        raise SystemExit("Splunk terms were not accepted; startup cancelled.")
+    if not accept_terms:
+        print(
+            "Splunk Enterprise requires accepting its license and current General Terms. "
+            "Review https://www.splunk.com/en_us/legal/splunk-general-terms.html before continuing.",
+            flush=True,
+        )
+        if not sys.stdin.isatty() or input("Type YES to accept Splunk terms and continue: ").strip() != "YES":
+            raise SystemExit("Splunk terms were not accepted; startup cancelled.")
+    else:
+        print("Splunk terms auto-accept enabled; ensure you reviewed and accept the license and General Terms.", flush=True)
 
     values = {
         "splunk": {
@@ -214,6 +217,11 @@ def show_logs(kubectl: str) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Start the DeviceDataHub AI flow on Kubernetes")
     parser.add_argument("--no-build", action="store_true", help="Reuse the local image")
+    parser.add_argument(
+        "--accept-splunk-terms",
+        action="store_true",
+        help="Skip the prompt; use only after reviewing and accepting Splunk terms",
+    )
     parser.add_argument("--values", help="Private Helm values file for broker and database settings")
     parser.add_argument("--delete-cluster", action="store_true", help="Delete the kind cluster and exit")
     args = parser.parse_args()
@@ -225,7 +233,7 @@ def main() -> int:
             run([tools["kind"], "delete", "cluster", "--name", KIND_CLUSTER])
         return 0
 
-    credentials_path = splunk_values_file()
+    credentials_path = splunk_values_file(accept_terms=args.accept_splunk_terms)
     ensure_cluster(tools["kind"], tools["docker"])
     install_stack(
         tools,
