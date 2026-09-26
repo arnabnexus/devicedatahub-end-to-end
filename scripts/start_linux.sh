@@ -165,6 +165,17 @@ start_background_forward() {
     log "$name port-forward started in background (PID $pid)"
 }
 
+print_followup_commands() {
+    printf '\n[start-linux] Run these commands from another terminal:\n'
+    printf '  cd %q\n' "$ROOT_DIR"
+    printf '  export PATH=%q:"$PATH"\n' "$ROOT_DIR/.local/bin"
+    printf '  kubectl get pods -n devicedatahub -o wide\n'
+    printf '  kubectl get services -n devicedatahub\n'
+    printf '  kubectl logs -n devicedatahub deploy/ai-flow-consumer --tail=50 -f\n'
+    printf '  kubectl logs -n devicedatahub deploy/ai-flow-inference -c inference --tail=50 -f\n'
+    printf '  python3 scripts/shutdown.py\n'
+}
+
 if ! run_forward "DeviceDataHub Grafana" "service/ai-flow-grafana" "3000:3000"; then
     log "No graphical terminal emulator found; starting detached port-forwards."
     start_background_forward "grafana" "service/ai-flow-grafana" "3000:3000"
@@ -174,7 +185,7 @@ if ! run_forward "DeviceDataHub Grafana" "service/ai-flow-grafana" "3000:3000"; 
     log "TimescaleDB: localhost:5433"
     log "TimescaleDB log: $RUNTIME_DIR/timescaledb.port-forward.log"
     log "Grafana URL: http://localhost:3000"
-    log "Use the kubectl log commands printed above to inspect workload logs."
+    print_followup_commands
     exit 0
 fi
 
@@ -182,7 +193,7 @@ if ! run_forward "DeviceDataHub TimescaleDB" "service/ai-flow-timescaledb" "5433
     log "Grafana terminal opened, but no second terminal emulator was available."
     start_background_forward "timescaledb" "service/ai-flow-timescaledb" "5433:5432"
     log "Grafana URL: http://localhost:3000"
-    log "Use the kubectl log commands printed above to inspect workload logs."
+    print_followup_commands
     exit 0
 fi
 
@@ -190,4 +201,4 @@ log "Child terminals started"
 log "Grafana: http://localhost:3000"
 log "TimescaleDB: localhost:5433, database telemetry"
 log "Keep both child terminals open while using Grafana or the database."
-log "Use the kubectl log commands printed above to inspect workload logs."
+print_followup_commands

@@ -166,12 +166,6 @@ def install_stack(tools: dict[str, str], *, rebuild: bool, values_file: str | No
 
 def show_logs(kubectl: str) -> None:
     run([kubectl, "get", "pods", "-n", NAMESPACE, "-o", "wide"])
-    print(f"Grafana: http://localhost:3000 (after port-forwarding is started)", flush=True)
-    print("Kubernetes log commands:", flush=True)
-    print(f"  {kubectl} logs -n {NAMESPACE} -l app.kubernetes.io/instance=ai-flow --all-containers=true --max-log-requests=20 --prefix --tail=100 -f", flush=True)
-    print(f"  {kubectl} logs -n {NAMESPACE} deploy/ai-flow-consumer --all-containers=true --tail=100 -f", flush=True)
-    print(f"  {kubectl} logs -n {NAMESPACE} deploy/ai-flow-inference -c inference --tail=100 -f", flush=True)
-    print(f"  {kubectl} logs -n {NAMESPACE} deploy/ai-flow-inference -c train-model --tail=200", flush=True)
 
 
 def main() -> int:
