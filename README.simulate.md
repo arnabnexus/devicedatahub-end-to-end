@@ -39,6 +39,13 @@ loop. Search in Splunk Web at `http://localhost:4000` with:
 index=main kubernetes.namespace_name=devicedatahub
 ```
 
+Sign in to Splunk Web as `admin`. Retrieve the generated password from the
+repository root with:
+
+```bash
+python3 -c 'import json; print(json.load(open(".runtime/splunk-values.json"))["splunk"]["adminPassword"])'
+```
+
 To isolate simulated publisher logs, filter by pod:
 
 ```spl
@@ -54,4 +61,5 @@ simulator:
 ```
 
 Run `python3 scripts/shutdown.py` to remove the broker, simulator, pods, Helm release,
-namespace, kind cluster, image, and local runtime processes.
+namespace, kind cluster, image, and port-forward processes. The generated Splunk
+credentials in `.runtime/splunk-values.json` are preserved for the next startup.

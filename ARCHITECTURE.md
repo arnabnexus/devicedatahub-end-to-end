@@ -60,6 +60,9 @@ graph TD
 Splunk is used for log search across both the external MQTT and simulator flows.
 The collector excludes its own and Splunk's pods to prevent log feedback loops.
 Events are indexed in `main` with namespace, pod, and container metadata.
+Splunk Web is available at `http://localhost:4000`; sign in as `admin` and
+retrieve the generated password with the command printed at startup or from
+`.runtime/splunk-values.json`. Shutdown preserves this file for subsequent runs.
 
 ## Data contracts
 

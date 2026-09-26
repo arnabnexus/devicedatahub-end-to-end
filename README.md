@@ -275,7 +275,9 @@ python3 scripts/shutdown.py
 
 This stops the port-forward processes, uninstalls the Helm release, deletes the
 namespace, deletes the kind cluster, removes the local image, and removes the
-project virtual environment.
+project virtual environment. The local `.runtime/splunk-values.json` file is
+preserved so the generated Splunk login and accepted-terms setting are reused
+on the next start.
 
 Preserve selected local resources when needed:
 

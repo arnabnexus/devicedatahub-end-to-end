@@ -172,6 +172,7 @@ start_background_forward() {
 }
 
 print_followup_commands() {
+    local splunk_password_command="python3 -c 'import json; print(json.load(open(\".runtime/splunk-values.json\"))[\"splunk\"][\"adminPassword\"])'"
     printf '\n[start-linux] Run these commands from another terminal:\n'
     printf '  cd %q\n' "$ROOT_DIR"
     printf '  export PATH=%q:"$PATH"\n' "$ROOT_DIR/.local/bin"
@@ -182,6 +183,9 @@ print_followup_commands() {
     printf '  kubectl logs -n devicedatahub deploy/ai-flow-splunk --tail=50 -f\n'
     printf '  kubectl logs -n devicedatahub daemonset/ai-flow-fluent-bit --tail=50 -f\n'
     printf '  Splunk search: index=main kubernetes.namespace_name=devicedatahub\n'
+    printf '  Splunk username: admin\n'
+    printf '  Splunk password command: %s\n' "$splunk_password_command"
+    printf '  Splunk UI: http://localhost:4000\n'
     printf '  python3 scripts/shutdown.py\n'
 }
 
@@ -195,9 +199,6 @@ if ! run_forward "DeviceDataHub Grafana" "grafana" "service/ai-flow-grafana" "30
     log "TimescaleDB: localhost:5433"
     log "TimescaleDB log: $RUNTIME_DIR/timescaledb.port-forward.log"
     log "Grafana URL: http://localhost:3000"
-    log "Splunk URL: http://localhost:4000"
-    log "Splunk username: admin"
-    log "Splunk credentials: $RUNTIME_DIR/splunk-values.json"
     print_followup_commands
     exit 0
 fi
@@ -209,9 +210,6 @@ if ! run_forward "DeviceDataHub TimescaleDB" "timescaledb" "service/ai-flow-time
     if ! run_forward "DeviceDataHub Splunk" "splunk" "service/ai-flow-splunk" "4000:8000"; then
         start_background_forward "splunk" "service/ai-flow-splunk" "4000:8000"
     fi
-    log "Splunk URL: http://localhost:4000"
-    log "Splunk username: admin"
-    log "Splunk credentials: $RUNTIME_DIR/splunk-values.json"
     print_followup_commands
     exit 0
 fi
@@ -224,7 +222,5 @@ fi
 log "Child terminals started"
 log "Grafana: http://localhost:3000"
 log "TimescaleDB: localhost:5433, database telemetry"
-log "Splunk: http://localhost:4000 (username: admin)"
-log "Splunk credentials: $RUNTIME_DIR/splunk-values.json"
 log "Keep both child terminals open while using Grafana or the database."
 print_followup_commands

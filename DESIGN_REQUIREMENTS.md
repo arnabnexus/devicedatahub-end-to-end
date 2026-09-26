@@ -66,6 +66,12 @@ Index: main
 Example search: index=main kubernetes.namespace_name=devicedatahub
 ```
 
+Retrieve the Splunk password from the repository root with:
+
+```bash
+python3 -c 'import json; print(json.load(open(".runtime/splunk-values.json"))["splunk"]["adminPassword"])'
+```
+
 ### MQTT output
 
 ```text

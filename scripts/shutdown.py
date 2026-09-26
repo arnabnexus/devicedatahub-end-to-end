@@ -63,7 +63,8 @@ def stop_port_forwards() -> None:
             subprocess.run(["kill", str(pid)], check=False)
         except (OSError, ValueError):
             pass
-    remove_path(RUNTIME_DIR)
+    for runtime_file in RUNTIME_DIR.glob("*.port-forward.*"):
+        remove_path(runtime_file)
 
 
 def main() -> int:

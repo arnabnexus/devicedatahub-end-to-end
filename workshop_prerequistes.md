@@ -465,7 +465,8 @@ python3 scripts/shutdown.py
 
 This removes the Helm release, namespace, kind cluster, Docker image, project
 virtual environment, simulator resources, and background port-forward
-processes.
+processes. It preserves `.runtime/splunk-values.json`, so your generated Splunk
+admin password remains available and the startup terms prompt is not repeated.
 
 ## Troubleshooting
 
