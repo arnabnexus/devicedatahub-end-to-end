@@ -22,7 +22,7 @@ inference, and optional local MQTT simulation.
 - At least 8 GB RAM; 16 GB is recommended
 - At least 20 GB free disk space
 - Administrator access to Windows
-- Internet access for Windows features, Ubuntu packages, GitHub, Docker Engine, and Kubernetes images
+- Internet access for Windows features, Ubuntu packages, GitHub, and Kubernetes images
 
 ### Enable virtualization in BIOS/UEFI
 
@@ -152,8 +152,8 @@ You should see Ubuntu details and a Linux home directory similar to:
 
 ## 5. Prepare Ubuntu packages
 
-The project startup script installs missing packages automatically, but install
-the base package set once so the workshop starts predictably:
+The project startup script installs missing Linux prerequisites automatically.
+Install the base packages once so the workshop starts predictably:
 
 ```bash
 sudo apt-get update
@@ -177,12 +177,14 @@ python3 -m venv --help >/dev/null && echo "python venv support: OK"
 docker --version
 ```
 
-## 6. Enable WSL systemd for Docker Engine
+## 6. Configure Docker Engine inside WSL
 
-The project can start Docker Engine through systemd, the service command, or a
-background `dockerd` fallback. Systemd is the most reliable WSL setup.
+The workshop runs Ubuntu's Docker Engine directly inside WSL. No Docker Desktop
+installation is needed. The launcher installs the `docker.io` package if it is
+missing and attempts to start the daemon.
 
-Create or edit `/etc/wsl.conf` inside Ubuntu:
+Enable systemd in WSL so Docker starts reliably. In Ubuntu, create or edit
+`/etc/wsl.conf`:
 
 ```bash
 sudo nano /etc/wsl.conf
@@ -195,63 +197,33 @@ Add:
 systemd=true
 ```
 
-Save in nano with `Ctrl+O`, press Enter, then exit with `Ctrl+X`.
-
-Close all Ubuntu/WSL terminals. From **PowerShell**, restart WSL:
+Save with `Ctrl+O`, press Enter, then exit with `Ctrl+X`. Close Ubuntu and run
+this from PowerShell:
 
 ```powershell
 wsl --shutdown
 ```
 
-Open Ubuntu again and verify systemd:
+Reopen Ubuntu and verify systemd is running:
 
 ```bash
 ps -p 1 -o comm=
 ```
 
-Expected output:
-
-```text
-systemd
-```
-
-Enable and start Docker Engine:
+Expected output is `systemd`. Start Docker and allow your Linux user to access
+the daemon:
 
 ```bash
 sudo systemctl enable --now docker
-```
-
-Verify Docker Engine:
-
-```bash
-sudo systemctl status docker --no-pager
-sudo docker info
-```
-
-Allow the current Linux user to run Docker without `sudo`:
-
-```bash
 sudo usermod -aG docker "$USER"
 ```
 
-Close the Ubuntu terminal, open a new Ubuntu terminal, and verify:
-
-```bash
-docker info
-```
-
-If `docker info` works without `sudo`, Docker Engine is ready.
-
-If systemd is not available, the project launcher attempts `service docker
-start`, then a background `dockerd` fallback. If that fallback fails, inspect:
-
-```bash
-cat /tmp/devicedatahub-dockerd.log
-```
+Close and reopen Ubuntu for the group change to take effect. The launcher can
+also start Docker automatically on later runs.
 
 ## 7. Verify WSL networking and Docker
 
-Run:
+Run these commands in Ubuntu:
 
 ```bash
 printf 'Linux user: '; whoami
@@ -260,18 +232,12 @@ printf 'WSL IP: '; hostname -I
 git --version
 python3 --version
 docker version
-docker info >/dev/null && echo "Docker daemon: OK"
-```
-
-The Docker client and server sections should both be present in `docker version`.
-
-Run a test container:
-
-```bash
+docker info >/dev/null && echo "Docker engine: OK"
 docker run --rm hello-world
 ```
 
-This confirms that Docker can pull and run images.
+The client and server sections should both be present in `docker version`. The
+test container confirms that Docker can pull and run images through WSL.
 
 ## 8. Configure Git identity
 
@@ -293,13 +259,15 @@ sudo apt-get install -y gh
 gh auth login
 ```
 
-## 9. Clone the repository
+## 9. Get the repository
 
-Create the standard workspace directory:
+Choose any location inside the WSL Linux filesystem, then clone the project
+once. The launcher itself does not clone; on each run it pulls the latest
+changes from the checkout's configured upstream.
 
 ```bash
-mkdir -p "$HOME/workspaces"
-cd "$HOME/workspaces"
+mkdir -p "$HOME/projects"
+cd "$HOME/projects"
 ```
 
 Clone the repository:
@@ -382,18 +350,19 @@ You are now in the repository and ready to run:
 
 The launcher will:
 
-1. Check or update `$HOME/workspaces/devicedatahub-end-to-end`.
-2. Create and activate `.venv`.
+1. Pull the existing checkout with `git pull --ff-only` (the checkout may be located anywhere).
+2. Create and activate `.venv` inside the checkout.
 3. Install Python requirements.
-4. Install Docker Engine if missing.
-5. Ask whether to enable the local MQTT simulator.
-6. Create or repair the kind cluster.
-7. Build and load the application image.
-8. Deploy the Helm release.
-9. Train the model in the inference init container.
-10. Start the consumer, inference, TimescaleDB, and Grafana workloads.
-11. Start local port-forwards.
-12. Stream Kubernetes logs.
+4. Install Docker Engine inside Ubuntu if missing and start it if stopped.
+5. Download `kind`, `kubectl`, and Helm into `.local/bin` inside the checkout when needed.
+6. Ask whether to enable the local MQTT simulator.
+7. Create or repair the kind cluster.
+8. Build and load the application image.
+9. Deploy the Helm release.
+10. Train the model in the inference init container.
+11. Start the consumer, inference, TimescaleDB, and Grafana workloads.
+12. Start local port-forwards.
+13. Stream Kubernetes logs.
 
 At the simulator prompt:
 
@@ -425,8 +394,8 @@ Password: postgres
 In another WSL terminal:
 
 ```bash
-cd "$HOME/workspaces/devicedatahub-end-to-end"
-export PATH="$HOME/.local/bin:$PATH"
+cd /path/to/devicedatahub-end-to-end
+export PATH="$PWD/.local/bin:$PATH"
 
 kubectl get pods -n devicedatahub -o wide
 kubectl get services -n devicedatahub
@@ -458,7 +427,7 @@ When validation is complete, stop all local port-forwards and Kubernetes
 resources:
 
 ```bash
-cd "$HOME/workspaces/devicedatahub-end-to-end"
+cd /path/to/devicedatahub-end-to-end
 python3 scripts/shutdown.py
 ```
 
@@ -484,13 +453,13 @@ wsl --set-version Ubuntu 2
 
 ### Docker permission denied
 
-Run:
+Ensure the current Linux user is in the `docker` group:
 
 ```bash
 sudo usermod -aG docker "$USER"
 ```
 
-Close and reopen Ubuntu, then test:
+Close and reopen Ubuntu, then verify:
 
 ```bash
 docker info
@@ -498,7 +467,7 @@ docker info
 
 ### Docker daemon cannot start
 
-Check:
+Check the service and daemon log:
 
 ```bash
 sudo systemctl status docker --no-pager
@@ -513,13 +482,17 @@ Check connectivity:
 git ls-remote https://github.com/arnabnexus/devicedatahub-end-to-end.git HEAD
 ```
 
-### The repository folder already exists
+### Git pull cannot update the checkout
 
-The launcher updates an existing Git clone with `git pull --ff-only`. If the
-folder is not a Git repository, move it or choose a different workspace:
+The launcher uses `git pull --ff-only`, so it stops rather than creating a merge
+commit if the local branch has diverged. Resolve or commit local changes, then
+rerun from any directory containing the project checkout. The launcher must be
+run from a Git checkout; it never clones the repository.
 
 ```bash
-WORKSPACE_DIR="$HOME/another-workspace" ./scripts/start_linux.sh
+git status
+git pull --ff-only
+./scripts/start_linux.sh
 ```
 
 ### Grafana shows no data

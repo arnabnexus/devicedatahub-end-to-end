@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-WORKSPACE_DIR="${WORKSPACE_DIR:-$HOME/workspaces}"
-REPO_URL="${REPO_URL:-https://github.com/arnabnexus/devicedatahub-end-to-end.git}"
-PROJECT_NAME="${PROJECT_NAME:-devicedatahub-end-to-end}"
-ROOT_DIR="$WORKSPACE_DIR/$PROJECT_NAME"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 VENV_DIR="$ROOT_DIR/.venv"
 NAMESPACE="devicedatahub"
 GRAFANA_FORWARD="service/ai-flow-grafana 3000:3000"
@@ -43,12 +41,21 @@ install_wsl_prerequisites() {
 
 install_wsl_prerequisites
 
+git -C "$ROOT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+    || fail "Run this script from a Git checkout of the project. Expected repository at $ROOT_DIR."
+
+log "Pulling latest changes for the existing checkout"
+git -C "$ROOT_DIR" pull --ff-only \
+    || fail "Could not update the checkout. Resolve local changes or pull conflicts, then rerun."
+
+export PATH="$ROOT_DIR/.local/bin:$PATH"
+
 start_docker_engine() {
     if docker info >/dev/null 2>&1; then
         return
     fi
 
-    log "Starting Docker Engine"
+    log "Starting Docker Engine inside Ubuntu"
     if command -v systemctl >/dev/null 2>&1 && systemctl is-system-running >/dev/null 2>&1; then
         sudo systemctl enable --now docker
     elif command -v service >/dev/null 2>&1; then
@@ -65,32 +72,16 @@ start_docker_engine() {
         sleep 1
     done
 
-    fail "Docker Engine could not start. Check /tmp/devicedatahub-dockerd.log and WSL systemd/cgroup support."
+    fail "Docker Engine could not start or is not accessible. Ensure your user is in the docker group and check /tmp/devicedatahub-dockerd.log."
 }
 
 command -v docker >/dev/null 2>&1 || fail "Docker Engine installation failed."
 start_docker_engine
 
 if command -v gh >/dev/null 2>&1; then
-    log "GitHub CLI detected. Public HTTPS cloning does not require gh auth login."
+    log "GitHub CLI detected. Public HTTPS pulls do not require gh auth login."
 else
-    log "GitHub CLI is not required for this public HTTPS repository; using git clone."
-fi
-
-mkdir -p "$WORKSPACE_DIR"
-if [[ -d "$ROOT_DIR/.git" ]]; then
-    log "Clone exists; skipping clone: $ROOT_DIR"
-    log "Pulling latest changes"
-    git -C "$ROOT_DIR" pull --ff-only
-elif [[ ! -e "$ROOT_DIR" ]]; then
-    log "Clone not found; cloning $REPO_URL"
-    git clone "$REPO_URL" "$ROOT_DIR"
-else
-    fail "$ROOT_DIR exists but is not a Git repository. Move it or set WORKSPACE_DIR."
-fi
-
-if [[ ! -d "$ROOT_DIR/.git" ]]; then
-    fail "Clone did not complete successfully: $ROOT_DIR"
+    log "GitHub CLI is not required for this public HTTPS repository; using git pull."
 fi
 
 cd "$ROOT_DIR"
@@ -126,8 +117,8 @@ fi
 python "${startup_args[@]}"
 
 KUBECTL="$(command -v kubectl || true)"
-if [[ -z "$KUBECTL" && -x "$HOME/.local/bin/kubectl" ]]; then
-    KUBECTL="$HOME/.local/bin/kubectl"
+if [[ -z "$KUBECTL" && -x "$ROOT_DIR/.local/bin/kubectl" ]]; then
+    KUBECTL="$ROOT_DIR/.local/bin/kubectl"
 fi
 [[ -n "$KUBECTL" ]] || fail "kubectl was not found after startup.py completed."
 

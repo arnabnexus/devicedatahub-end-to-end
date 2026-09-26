@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import os
 import shutil
 import subprocess
 import sys
@@ -12,13 +11,10 @@ from pathlib import Path
 
 
 SCRIPT_ROOT = Path(__file__).resolve().parent.parent
-WORKSPACE_ROOT = Path(os.getenv("WORKSPACE_DIR", Path.home() / "workspaces"))
-PROJECT_NAME = os.getenv("PROJECT_NAME", "devicedatahub-end-to-end")
-CLONED_ROOT = WORKSPACE_ROOT / PROJECT_NAME
-ROOT = CLONED_ROOT if (CLONED_ROOT / ".git").is_dir() else SCRIPT_ROOT
+ROOT = SCRIPT_ROOT
 VENV = ROOT / ".venv"
 RUNTIME_DIR = ROOT / ".runtime"
-LOCAL_BIN = Path.home() / ".local" / "bin"
+LOCAL_BIN = ROOT / ".local" / "bin"
 KIND_CLUSTER = "devicedatahub"
 NAMESPACE = "devicedatahub"
 RELEASE = "ai-flow"
@@ -48,9 +44,6 @@ def has_cluster(kind: str) -> bool:
         check=False,
     )
     return result.returncode == 0 and KIND_CLUSTER in result.stdout.splitlines()
-    SCRIPT_ROOT = Path(__file__).resolve().parent.parent
-    WORKSPACE_ROOT = Path(os.getenv("WORKSPACE_DIR", Path.home() / "workspaces"))
-    PROJECT_NAME = os.getenv("PROJECT_NAME", "devicedatahub-end-to-end")
 
 
 def remove_path(path: Path) -> None:

@@ -12,32 +12,23 @@ MQTT over ngrok -> consumer -> TimescaleDB -> Grafana
 
 ## Start On Linux
 
+Open a terminal in any existing checkout of the repository and run:
+
 ```bash
+cd /path/to/devicedatahub-end-to-end
 chmod +x scripts/start_linux.sh
 ./scripts/start_linux.sh
 ```
 
-The launcher uses `$HOME/workspaces` as the WSL workspace root, creates it when
-needed, and clones:
-
-```text
-https://github.com/arnabnexus/devicedatahub-end-to-end.git
-```
-
-If `$HOME/workspaces/devicedatahub-end-to-end` already exists as a Git
-repository, it prints a clone-skipped message, runs `git pull --ff-only`, and
-starts from the updated project. Override the location or repository when
-needed:
-
-```bash
-WORKSPACE_DIR="$HOME/workspaces" \
-REPO_URL="https://github.com/arnabnexus/devicedatahub-end-to-end.git" \
-./scripts/start_linux.sh
-```
+The launcher finds the project root from its own location, runs
+`git pull --ff-only`, and keeps the virtual environment, downloaded Kubernetes
+tools, and runtime files inside that checkout. The checkout can be located
+anywhere; the launcher does not clone the repository. For a first-time setup,
+clone the repository yourself, then run the commands above from that checkout.
 
 `scripts/start_linux.sh` performs the complete startup sequence:
 
-1. Installs and starts Docker Engine when it is missing or stopped.
+1. Installs Docker Engine inside Ubuntu if missing and starts it when stopped.
 2. Creates `.venv` if it does not exist.
 3. Activates the virtual environment.
 4. Installs `requirements.txt`.
@@ -52,9 +43,8 @@ REPO_URL="https://github.com/arnabnexus/devicedatahub-end-to-end.git" \
 13. Starts `inference.py` only after training and database readiness succeed.
 14. Starts Grafana and TimescaleDB port-forward processes.
 
-GitHub CLI is not required for this public HTTPS repository. `git clone` works
-without `gh auth login`. GitHub CLI authentication is only needed if you change
-`REPO_URL` to a private repository or use an SSH/private GitHub workflow.
+GitHub CLI is not required for this public HTTPS repository. Git can pull it
+without `gh auth login`.
 
 The script supports graphical terminals. In WSL or a headless Linux shell it
 runs the port-forwards in the background and writes their logs and PIDs under
