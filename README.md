@@ -23,6 +23,11 @@ chmod +x scripts/start_cloud.sh
 ./scripts/start_cloud.sh
 ```
 
+The launcher supports native Linux and Ubuntu on WSL2. Windows users should
+follow the Windows/WSL path in [workshop_prerequistes.md](workshop_prerequistes.md);
+native Linux users can follow its separate Ubuntu/Debian path, then continue at
+the common setup section.
+
 The launcher finds the project root from its own location, runs
 `git pull --ff-only`, and keeps the virtual environment, downloaded Kubernetes
 tools, and runtime files inside that checkout. The checkout can be located
@@ -31,7 +36,7 @@ clone the repository yourself, then run the commands above from that checkout.
 
 `scripts/start_cloud.sh` performs the complete startup sequence:
 
-1. Installs Docker Engine inside Ubuntu if missing and starts it when stopped.
+1. Installs Docker Engine on Ubuntu/Debian if missing and starts it when stopped; other Linux distributions need Docker installed before launch.
 2. Creates `.venv` if it does not exist.
 3. Activates the virtual environment.
 4. Installs `requirements.txt` only when it is new or has changed since the previous launch.

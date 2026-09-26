@@ -1,10 +1,14 @@
 # DeviceDataHub Workshop Prerequisites
 
-This guide prepares a Windows laptop running Ubuntu on WSL2 to run the
-DeviceDataHub AI flow entirely in Kubernetes.
+This guide prepares either a Windows laptop running Ubuntu on WSL2 or a native
+Ubuntu/Debian Linux machine to run the DeviceDataHub AI flow in Kubernetes.
 
-At the end, you will be in a WSL terminal inside the repository and ready to
-run:
+Choose one platform path below, then continue with the common project setup:
+
+- Windows: install Ubuntu on WSL2 and run the commands in the WSL Linux filesystem.
+- Linux: use a native Ubuntu/Debian terminal (or install equivalent packages on another distribution).
+
+Both paths converge on the same repository setup and launcher command:
 
 ```bash
 ./scripts/start_cloud.sh
@@ -14,9 +18,14 @@ The flow starts an MQTT consumer, TimescaleDB, Grafana, Splunk log search,
 live MQTT/telemetry monitor pages, model training, inference, and optional local
 MQTT simulation.
 
-## 1. Hardware and Windows prerequisites
+## Windows setup: Ubuntu on WSL2
 
-### Required hardware
+Follow this section only on Windows. Native Linux users can skip to
+[Native Linux setup](#native-linux-setup-ubuntu-or-debian).
+
+### 1. Hardware and Windows prerequisites
+
+#### Required hardware
 
 - 64-bit Windows 10 version 2004 or newer, or Windows 11
 - CPU virtualization support: Intel VT-x or AMD-V
@@ -25,7 +34,7 @@ MQTT simulation.
 - Administrator access to Windows
 - Internet access for Windows features, Ubuntu packages, GitHub, and Kubernetes images
 
-### Enable virtualization in BIOS/UEFI
+#### Enable virtualization in BIOS/UEFI
 
 Virtualization must be enabled before WSL2 can run reliably.
 
@@ -41,7 +50,7 @@ Virtualization must be enabled before WSL2 can run reliably.
 The exact menu names depend on the laptop manufacturer. If Windows Task
 Manager already shows **Virtualization: Enabled**, this step is complete.
 
-### Verify virtualization in Windows
+#### Verify virtualization in Windows
 
 Open **PowerShell as Administrator** and run:
 
@@ -59,7 +68,7 @@ You can also check:
 3. Select **CPU**.
 4. Confirm **Virtualization: Enabled**.
 
-## 2. Enable Windows WSL features
+### 2. Enable Windows WSL features
 
 Open **PowerShell as Administrator** and run:
 
@@ -92,7 +101,7 @@ wsl --status
 
 Expected output should identify WSL2 as the default version.
 
-## 3. Install Ubuntu for WSL
+### 3. Install Ubuntu for WSL
 
 List available distributions:
 
@@ -130,7 +139,7 @@ Launch Ubuntu from the Start menu or PowerShell:
 wsl -d Ubuntu
 ```
 
-## 4. Complete the first Ubuntu login
+### 4. Complete the first Ubuntu login
 
 On the first Ubuntu launch, create a Linux username and password.
 
@@ -151,10 +160,11 @@ You should see Ubuntu details and a Linux home directory similar to:
 /home/<your-linux-user>
 ```
 
-## 5. Prepare Ubuntu packages
+### 5. Prepare Ubuntu packages
 
-The project startup script installs missing Linux prerequisites automatically.
-Install the base packages once so the workshop starts predictably:
+The project startup script can install missing prerequisites automatically on
+Ubuntu/Debian systems with `apt-get`. Install the base packages once so the
+workshop starts predictably:
 
 ```bash
 sudo apt-get update
@@ -178,7 +188,7 @@ python3 -m venv --help >/dev/null && echo "python venv support: OK"
 docker --version
 ```
 
-## 6. Configure Docker Engine inside WSL
+### 6. Configure Docker Engine inside WSL
 
 The workshop runs Ubuntu's Docker Engine directly inside WSL. No Docker Desktop
 installation is needed. The launcher installs the `docker.io` package if it is
@@ -222,7 +232,7 @@ sudo usermod -aG docker "$USER"
 Close and reopen Ubuntu for the group change to take effect. The launcher can
 also start Docker automatically on later runs.
 
-## 7. Verify WSL networking and Docker
+### 7. Verify WSL networking and Docker
 
 Run these commands in Ubuntu:
 
@@ -240,9 +250,64 @@ docker run --rm hello-world
 The client and server sections should both be present in `docker version`. The
 test container confirms that Docker can pull and run images through WSL.
 
-## 8. Configure Git identity
+## Native Linux setup: Ubuntu or Debian
 
-Configure a Git identity for local commits if this laptop will be used for
+Follow this section on a Linux machine without WSL. These commands target
+Ubuntu/Debian; on another distribution install the equivalent Git, Python 3,
+venv, curl, and Docker Engine packages with that distribution's package manager.
+
+### 1. Check hardware and Linux
+
+Use a 64-bit Linux system with CPU virtualization enabled, at least 16 GB RAM
+recommended for Splunk and the Kubernetes workloads, 30 GB free disk space, and
+internet access. Verify the operating system and virtualization support:
+
+```bash
+cat /etc/os-release
+lscpu | grep -i virtualization || true
+```
+
+### 2. Install Linux prerequisites
+
+```bash
+sudo apt-get update
+sudo apt-get upgrade -y
+sudo apt-get install -y \
+  git \
+  curl \
+  ca-certificates \
+  python3 \
+  python3-venv \
+  python3-pip \
+  docker.io
+```
+
+### 3. Start Docker Engine
+
+The launcher uses the Docker Engine inside Linux; Docker Desktop is not needed.
+Enable and start the service, then allow your account to access Docker:
+
+```bash
+sudo systemctl enable --now docker
+sudo usermod -aG docker "$USER"
+```
+
+Log out and back in (or restart the machine) for the group change to take
+effect. Verify Docker works without `sudo`:
+
+```bash
+docker version
+docker info >/dev/null && echo "Docker Engine: OK"
+docker run --rm hello-world
+```
+
+The Docker client and server sections should both appear in `docker version`.
+
+## Common setup: all platforms
+
+### 1. Configure Git identity
+
+Configure a Git identity for local commits if this workstation will be used for
 workshop changes:
 
 ```bash
@@ -253,18 +318,20 @@ git config --global user.email "your-email@example.com"
 GitHub CLI is optional. This project uses a public HTTPS repository, so cloning
 does not require `gh auth login`.
 
-For private repositories, install and authenticate GitHub CLI separately:
+For private repositories, install GitHub CLI with your distribution's package
+manager, then authenticate. On Ubuntu/Debian, install it with:
 
 ```bash
-sudo apt-get install -y gh
+sudo apt-get install -y gh  # Ubuntu/Debian
 gh auth login
 ```
 
-## 9. Get the repository
+### 2. Get the repository
 
-Choose any location inside the WSL Linux filesystem, then clone the project
-once. The launcher itself does not clone; on each run it pulls the latest
-changes from the checkout's configured upstream.
+Choose a location in your Linux filesystem, then clone the project once. On
+Windows, use the WSL Linux filesystem (for example, under `$HOME/projects`),
+not a mounted Windows directory. The launcher itself does not clone; on each
+run it pulls the latest changes from the checkout's configured upstream.
 
 ```bash
 mkdir -p "$HOME/projects"
@@ -304,7 +371,7 @@ data/
 Docker files and `requirements.txt` intentionally remain at the repository root
 because the repository root is the Docker build context.
 
-## 10. Make the Linux launcher executable
+### 3. Make the Linux launcher executable
 
 Run:
 
@@ -325,7 +392,7 @@ The mode should contain `x`, for example:
 -rwxr-xr-x
 ```
 
-## 11. Verify the startup dependencies before launch
+### 4. Verify the startup dependencies before launch
 
 Run this final preflight:
 
@@ -341,7 +408,7 @@ git ls-remote https://github.com/arnabnexus/devicedatahub-end-to-end.git HEAD
 
 If the last command prints a commit hash, GitHub access is working.
 
-## 12. Start the workshop flow
+### 5. Start the workshop flow
 
 You are now in the repository and ready to run:
 
@@ -354,7 +421,7 @@ The launcher will:
 1. Pull the existing checkout with `git pull --ff-only` (the checkout may be located anywhere).
 2. Create and activate `.venv` inside the checkout.
 3. Install Python requirements only when the requirements manifest is new or has changed.
-4. Install Docker Engine inside Ubuntu if missing and start it if stopped.
+4. Install Docker Engine on Ubuntu/Debian if missing and start it if stopped. On other distributions, install the equivalent Docker Engine package first.
 5. Download `kind`, `kubectl`, and Helm into `.local/bin` inside the checkout when needed.
 6. Ask whether to enable the local MQTT simulator.
 7. Create or repair the kind cluster.
@@ -434,9 +501,9 @@ For a quicker rerun when application source has not changed and the local image
 already exists, run `SKIP_IMAGE_BUILD=true ./scripts/start_cloud.sh`. Use the
 normal command after source or Docker build-input changes so the image is rebuilt.
 
-## 13. Verify after startup
+### 6. Verify after startup
 
-In another WSL terminal:
+In another Linux terminal (WSL Ubuntu or native Linux):
 
 ```bash
 cd /path/to/devicedatahub-end-to-end
@@ -489,7 +556,7 @@ MQTT connected
 Published anomaly message
 ```
 
-## 14. Shutdown after the workshop
+### 7. Shutdown after the workshop
 
 When validation is complete, stop all local port-forwards and Kubernetes
 resources:
@@ -506,12 +573,14 @@ admin password remains available and the startup terms prompt is not repeated.
 
 ## Troubleshooting
 
-### Virtualization is disabled
+### Windows and WSL
+
+#### Virtualization is disabled
 
 Return to BIOS/UEFI and enable Intel VT-x or AMD SVM/AMD-V. Then restart
 Windows and verify virtualization in Task Manager.
 
-### WSL reports version 1
+#### WSL reports version 1
 
 From PowerShell:
 
@@ -528,7 +597,8 @@ Ensure the current Linux user is in the `docker` group:
 sudo usermod -aG docker "$USER"
 ```
 
-Close and reopen Ubuntu, then verify:
+Log out and back in on native Linux, or close and reopen Ubuntu on WSL, then
+verify:
 
 ```bash
 docker info
@@ -536,10 +606,16 @@ docker info
 
 ### Docker daemon cannot start
 
-Check the service and daemon log:
+Check the Docker service and system log:
 
 ```bash
 sudo systemctl status docker --no-pager
+journalctl -u docker --no-pager -n 100
+```
+
+If the startup script had to use its no-systemd background fallback, also check:
+
+```bash
 cat /tmp/devicedatahub-dockerd.log
 ```
 
