@@ -7,6 +7,8 @@ VENV_DIR="$ROOT_DIR/.venv"
 NAMESPACE="devicedatahub"
 RUNTIME_DIR="$ROOT_DIR/.runtime"
 
+chmod 755 "$SCRIPT_DIR"/*.sh "$SCRIPT_DIR"/*.py
+
 log() {
     printf '\n[start-linux] %s\n' "$*"
 }
