@@ -423,16 +423,26 @@ kubectl logs -n devicedatahub deploy/ai-flow-inference -c inference --tail=50
 kubectl logs -n devicedatahub daemonset/ai-flow-fluent-bit --tail=50
 ```
 
-In Splunk Search & Reporting, search all project pod logs with:
+In Splunk Search & Reporting, choose **Last 15 minutes** or **All time** and
+search all project logs with:
 
 ```spl
-index=main kubernetes.namespace_name=devicedatahub
+index=main
 ```
 
-Filter to inference or simulator pods with `kubernetes.pod_name`, for example:
+Filter logs by workload text:
 
 ```spl
-index=main kubernetes.namespace_name=devicedatahub kubernetes.pod_name=ai-flow-inference*
+index=main "ai-flow-inference"
+index=main "ai-flow-consumer"
+index=main "ai-flow-simulator"
+```
+
+The simulator search returns events when simulation mode is enabled. You can
+also filter by Kubernetes pod metadata:
+
+```spl
+index=main kubernetes.namespace_name=devicedatahub kubernetes.pod_name="ai-flow-inference*"
 ```
 
 Expected pod state:

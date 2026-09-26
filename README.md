@@ -74,19 +74,27 @@ for simulator settings.
 
 Fluent Bit collects application pod logs from the `devicedatahub` namespace in
 both MQTT modes. Splunk and Fluent Bit logs are excluded to prevent a feedback
-loop. In Splunk Search & Reporting, select the `main` index and search:
+loop. In Splunk Web, open **Search & Reporting**, set the time range to **Last
+15 minutes** (or **All time**), and run one of these searches:
 
 ```spl
-index=main kubernetes.namespace_name=devicedatahub
+index=main
 ```
 
-Filter to inference pod events with:
+Filter by workload text:
 
 ```spl
-index=main kubernetes.namespace_name=devicedatahub kubernetes.pod_name=ai-flow-inference*
+index=main "ai-flow-inference"
+index=main "ai-flow-consumer"
+index=main "ai-flow-simulator"
 ```
 
-Events include `kubernetes.pod_name` and `kubernetes.container_name` fields.
+The simulator search returns events when simulation mode is enabled. To filter
+by pod metadata, use:
+
+```spl
+index=main kubernetes.namespace_name=devicedatahub kubernetes.pod_name="ai-flow-inference*"
+```
 
 ## Grafana And Database Access
 

@@ -182,7 +182,12 @@ print_followup_commands() {
     printf '  kubectl logs -n devicedatahub deploy/ai-flow-inference -c inference --tail=50 -f\n'
     printf '  kubectl logs -n devicedatahub deploy/ai-flow-splunk --tail=50 -f\n'
     printf '  kubectl logs -n devicedatahub daemonset/ai-flow-fluent-bit --tail=50 -f\n'
-    printf '  Splunk search: index=main kubernetes.namespace_name=devicedatahub\n'
+    printf '  Splunk searches (Search & Reporting; time range: Last 15 minutes):\n'
+    printf '    All project logs: index=main\n'
+    printf '    Inference logs: index=main "ai-flow-inference"\n'
+    printf '    Consumer logs: index=main "ai-flow-consumer"\n'
+    printf '    Simulator logs (simulation mode): index=main "ai-flow-simulator"\n'
+    printf '    Pod metadata filter: index=main kubernetes.namespace_name=devicedatahub kubernetes.pod_name="ai-flow-inference*"\n'
     printf '  Splunk username: admin\n'
     printf '  Splunk password command: %s\n' "$splunk_password_command"
     printf '  Splunk UI: http://localhost:4000\n'
