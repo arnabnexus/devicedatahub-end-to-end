@@ -73,6 +73,11 @@ The first startup can take several minutes while large container images are
 downloaded and Splunk initializes. Repeat starts skip Python dependency
 installation when `requirements.txt` is unchanged; Helm still waits for all
 workloads to become ready.
+Helm is allowed up to 30 minutes for deployment. If it reports a deadline
+timeout while pods are still initializing, startup waits up to another 30
+minutes for every namespace pod to become Ready before continuing. On a rerun,
+it checks the existing release and detects a previous Helm timeout before
+retrying.
 
 For a quicker rerun when application source has not changed and the local image
 already exists, use `SKIP_IMAGE_BUILD=true ./scripts/start_cloud.sh`. Do not use
@@ -330,7 +335,7 @@ helm upgrade --install ai-flow helm/ai-flow \
   --set image.tag=latest \
   --values .runtime/splunk-values.json \
   --wait \
-  --timeout 20m
+  --timeout 30m
 ```
 
 ## Shutdown

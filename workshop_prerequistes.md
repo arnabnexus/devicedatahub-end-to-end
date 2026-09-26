@@ -433,6 +433,12 @@ The launcher will:
 13. Start local port-forwards: Splunk `4000`, MQTT monitor `5000`, and telemetry monitor host port `6080` to container port `6000`.
 14. Print Kubernetes log commands and Splunk searches.
 
+Helm waits up to 30 minutes for deployment. If that wait reaches its deadline
+while pods are still initializing, startup checks pod readiness and waits up to
+30 more minutes for every namespace pod to become Ready before proceeding. If
+you rerun after a timed-out installation, startup checks the existing Helm
+release and pod state before retrying.
+
 On first startup, read the Splunk license and current General Terms at
 https://www.splunk.com/en_us/legal/splunk-general-terms.html. Normally the
 installer requires you to type `YES` to confirm acceptance. After reviewing and

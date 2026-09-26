@@ -23,6 +23,8 @@ LOCAL_BIN = ROOT / ".local" / "bin"
 KIND_CLUSTER = "devicedatahub"
 NAMESPACE = "devicedatahub"
 IMAGE = "devicedatahub-ai-flow:latest"
+DEPLOY_TIMEOUT = "30m"
+POD_RECOVERY_TIMEOUT = "30m"
 
 
 def command_path(name: str) -> str | None:
@@ -131,6 +133,112 @@ def ensure_cluster(kind: str, docker: str) -> None:
         print(f"Using existing kind cluster: {KIND_CLUSTER}", flush=True)
 
 
+def check_existing_install(tools: dict[str, str]) -> None:
+    status_result = subprocess.run(
+        [tools["helm"], "status", "ai-flow", "--namespace", NAMESPACE, "--output", "json"],
+        cwd=ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        check=False,
+    )
+    if status_result.returncode != 0:
+        print("No existing Helm release found; treating this as a fresh installation.", flush=True)
+        return
+
+    try:
+        release_info = json.loads(status_result.stdout).get("info", {})
+        release_status = release_info.get("status", "unknown")
+        release_description = release_info.get("description", "")
+    except json.JSONDecodeError:
+        release_status = "unknown"
+        release_description = ""
+    print(f"Existing Helm release detected (status: {release_status}); checking namespace pods before upgrade.", flush=True)
+
+    pods_result = subprocess.run(
+        [tools["kubectl"], "get", "pods", "--namespace", NAMESPACE, "--output", "json"],
+        cwd=ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        check=False,
+    )
+    if pods_result.returncode != 0:
+        return
+    try:
+        pods = json.loads(pods_result.stdout).get("items", [])
+    except json.JSONDecodeError:
+        return
+    ready_count = sum(
+        any(condition.get("type") == "Ready" and condition.get("status") == "True"
+            for condition in pod.get("status", {}).get("conditions", []))
+        for pod in pods
+    )
+    print(f"Existing namespace pods ready: {ready_count}/{len(pods)}.", flush=True)
+    previous_timeout = any(
+        phrase in release_description.lower()
+        for phrase in ("context deadline exceeded", "timed out waiting")
+    )
+    if previous_timeout and pods:
+        if ready_count == len(pods):
+            print("Previous Helm timeout detected; existing pods are all Ready. Continuing with Helm reconciliation.", flush=True)
+        else:
+            print("Previous Helm timeout detected; waiting for existing pods to finish initializing before retrying.", flush=True)
+            wait_for_all_pods_ready(tools["kubectl"])
+    elif release_status in {"failed", "pending-install", "pending-upgrade"}:
+        print("Previous Helm release is not deployed; startup will retry the Helm upgrade and verify pod readiness.", flush=True)
+
+
+def wait_for_all_pods_ready(kubectl: str) -> None:
+    print(
+        f"Waiting up to {POD_RECOVERY_TIMEOUT} for every pod in {NAMESPACE} to become Ready "
+        "(all pod init containers must complete)...",
+        flush=True,
+    )
+    run(
+        [
+            kubectl,
+            "wait",
+            "--namespace",
+            NAMESPACE,
+            "--for=condition=Ready",
+            "pods",
+            "--all",
+            f"--timeout={POD_RECOVERY_TIMEOUT}",
+        ]
+    )
+    run([kubectl, "get", "pods", "--namespace", NAMESPACE, "--output", "wide"])
+    print("All namespace pods are Ready; continuing startup.", flush=True)
+
+
+def run_helm_upgrade(command: list[str], kubectl: str) -> None:
+    print(f"$ {' '.join(command)}", flush=True)
+    result = subprocess.run(
+        command,
+        cwd=ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        check=False,
+    )
+    if result.stdout:
+        print(result.stdout, end="" if result.stdout.endswith("\n") else "\n", flush=True)
+    if result.returncode == 0:
+        return
+
+    output_text = result.stdout or ""
+    if "context deadline exceeded" in output_text.lower() or "timed out waiting" in output_text.lower():
+        print(
+            "Helm reached its deployment timeout, but Kubernetes resources may still be initializing. "
+            "Checking pod readiness before deciding whether startup failed.",
+            flush=True,
+        )
+        wait_for_all_pods_ready(kubectl)
+        return
+
+    raise subprocess.CalledProcessError(result.returncode, command, output=output_text)
+
+
 def install_stack(
     tools: dict[str, str],
     *,
@@ -173,12 +281,12 @@ def install_stack(
         "image.tag=latest",
         "--wait",
         "--timeout",
-        "20m",
+        DEPLOY_TIMEOUT,
     ]
     if values_file:
         command.extend(["--values", values_file])
     command.extend(["--values", str(splunk_values)])
-    run(command)
+    run_helm_upgrade(command, tools["kubectl"])
 
 
 def splunk_values_file(*, accept_terms: bool = False) -> Path:
@@ -250,6 +358,7 @@ def main() -> int:
 
     credentials_path = splunk_values_file(accept_terms=args.accept_splunk_terms)
     ensure_cluster(tools["kind"], tools["docker"])
+    check_existing_install(tools)
     install_stack(
         tools,
         rebuild=not args.no_build,
